@@ -24,6 +24,14 @@ const useFleetStore = create((set, get) => ({
   fetchAll: async () => {
     set({ isLoading: true });
 
+    // Test de conexión
+    const { error: connError } = await supabase.from('drivers').select('count').limit(1);
+    if (connError) {
+      alert('Error de conexión con Supabase: ' + connError.message);
+      set({ isLoading: false });
+      return;
+    }
+
     const [t, d, tr, m, i, cc, tu] = await Promise.all([
       supabase.from('trucks').select('*').order('created_at'),
       supabase.from('drivers').select('*').order('created_at'),
@@ -124,16 +132,23 @@ const useFleetStore = create((set, get) => ({
   // ── Drivers ──────────────────────────────────────────────────
   addDriver: async (data) => {
     const driver = { ...data, id: newId(), created_at: now() };
+    const { error } = await supabase.from('drivers').insert(driver);
+    if (error) {
+      alert('Error al guardar chofer: ' + error.message);
+      return false;
+    }
     set((s) => ({ drivers: [...s.drivers, driver] }));
-    await supabase.from('drivers').insert(driver);
+    return true;
   },
   updateDriver: async (id, data) => {
+    const { error } = await supabase.from('drivers').update(data).eq('id', id);
+    if (error) { alert('Error al actualizar: ' + error.message); return; }
     set((s) => ({ drivers: s.drivers.map((d) => (d.id === id ? { ...d, ...data } : d)) }));
-    await supabase.from('drivers').update(data).eq('id', id);
   },
   deleteDriver: async (id) => {
+    const { error } = await supabase.from('drivers').delete().eq('id', id);
+    if (error) { alert('Error al eliminar: ' + error.message); return; }
     set((s) => ({ drivers: s.drivers.filter((d) => d.id !== id) }));
-    await supabase.from('drivers').delete().eq('id', id);
   },
 
   // ── Trips ────────────────────────────────────────────────────
