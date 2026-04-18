@@ -183,6 +183,7 @@ export default function Fleet() {
       kilometraje_actual: parseFloat(form.kilometraje_actual) || 0,
       ultimo_cambio_aceite: parseFloat(form.ultimo_cambio_aceite) || 0,
       intervalo_cambio_aceite: parseFloat(form.intervalo_cambio_aceite) || 10000,
+      fecha_ultimo_mantenimiento: form.fecha_ultimo_mantenimiento || null,
     };
     if (editItem) {
       updateTruck(editItem.id, data);

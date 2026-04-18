@@ -135,12 +135,20 @@ export default function Drivers() {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
   };
+  const DATE_FIELDS = ['licencia_vencimiento', 'fecha_nacimiento', 'fecha_ingreso'];
+  const sanitize = (data) => {
+    const out = { ...data };
+    DATE_FIELDS.forEach((f) => { if (out[f] === '') out[f] = null; });
+    return out;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const data = sanitize(form);
     if (editItem) {
-      updateDriver(editItem.id, form);
+      updateDriver(editItem.id, data);
     } else {
-      addDriver(form);
+      addDriver(data);
     }
     setShowModal(false);
     setEditItem(null);

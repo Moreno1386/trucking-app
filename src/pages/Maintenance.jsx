@@ -70,6 +70,7 @@ export default function Maintenance() {
       costo: parseFloat(form.costo) || 0,
       kilometraje_al_servicio: parseFloat(form.kilometraje_al_servicio) || 0,
       proximo_servicio_km: parseFloat(form.proximo_servicio_km) || 0,
+      fecha: form.fecha || null,
     };
     if (editItem) updateMaintenance(editItem.id, data);
     else addMaintenance(data);
