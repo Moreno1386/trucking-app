@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Plus, Edit, Trash2, X, Calendar, Shield } from 'lucide-react';
+import { FileText, Plus, Edit, Trash2, X, Calendar, Shield, Eye } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
 import { formatDate, formatCurrency, getDaysRemaining, daysRemainingClass } from '../utils/helpers';
 
@@ -21,6 +21,7 @@ const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ou
 export default function Insurance() {
   const { insurances, trucks, addInsurance, updateInsurance, deleteInsurance } = useFleetStore();
   const [showModal, setShowModal] = useState(false);
+  const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
@@ -126,6 +127,9 @@ export default function Insurance() {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-3 border-t border-gray-50">
+                  <button onClick={() => setShowDetail({ ins, truck })} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg py-1.5 transition-colors">
+                    <Eye className="w-3.5 h-3.5" /> Ver
+                  </button>
                   <button onClick={() => openEdit(ins)} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg py-1.5 transition-colors">
                     <Edit className="w-3.5 h-3.5" /> Editar
                   </button>
@@ -136,6 +140,43 @@ export default function Insurance() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {showDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-bold">{showDetail.ins.aseguradora} — Póliza {showDetail.ins.numero_poliza}</h2>
+              <button onClick={() => setShowDetail(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 grid grid-cols-2 gap-4 text-sm max-h-[70vh] overflow-y-auto">
+              {[
+                ['Aseguradora', showDetail.ins.aseguradora],
+                ['No. Póliza', showDetail.ins.numero_poliza],
+                ['Cobertura', showDetail.ins.tipo_cobertura || '—'],
+                ['Estado', showDetail.ins.estado],
+                ['Unidad', showDetail.truck ? `Unidad ${showDetail.truck.numero_unidad} — ${showDetail.truck.marca} ${showDetail.truck.modelo}` : '—'],
+                ['Placa', showDetail.truck?.placa || '—'],
+                ['Fecha Inicio', formatDate(showDetail.ins.fecha_inicio)],
+                ['Fecha Vencimiento', formatDate(showDetail.ins.fecha_vencimiento)],
+                ['Prima Anual', formatCurrency(showDetail.ins.prima_anual)],
+                ['Suma Asegurada', formatCurrency(showDetail.ins.suma_asegurada)],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="text-xs text-gray-400">{k}</div>
+                  <div className="font-medium text-gray-900">{v}</div>
+                </div>
+              ))}
+              {showDetail.ins.notas && (
+                <div className="col-span-2">
+                  <div className="text-xs text-gray-400">Notas</div>
+                  <div className="text-gray-700">{showDetail.ins.notas}</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CreditCard, Plus, Edit, Trash2, X, Phone, MessageCircle, Info } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, X, Phone, MessageCircle, Info, Eye } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
 import { formatCurrency, maskCard } from '../utils/helpers';
 
@@ -94,6 +94,7 @@ function CardVisual({ card }) {
 export default function CreditCards() {
   const { creditCards, addCreditCard, updateCreditCard, deleteCreditCard } = useFleetStore();
   const [showModal, setShowModal] = useState(false);
+  const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
@@ -171,23 +172,54 @@ export default function CreditCards() {
               <CardVisual card={card} />
               {/* Action buttons below card */}
               <div className="flex gap-2">
+                <button onClick={() => setShowDetail(card)} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg py-2 transition-colors shadow-sm">
+                  <Eye className="w-3.5 h-3.5" /> Ver
+                </button>
                 <button onClick={() => openEdit(card)} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-600 bg-white border border-blue-200 hover:bg-blue-50 rounded-lg py-2 transition-colors shadow-sm">
                   <Edit className="w-3.5 h-3.5" /> Editar
                 </button>
-                <a
-                  href={`${whatsappUrl}?text=Recordatorio tarjeta ${maskCard(card.numero_tarjeta)} — Día pago: ${card.dia_pago}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1.5 text-xs text-green-700 bg-white border border-green-200 hover:bg-green-50 rounded-lg py-2 transition-colors shadow-sm"
-                >
-                  <Phone className="w-3.5 h-3.5" /> Recordatorio
-                </a>
                 <button onClick={() => handleDelete(card)} className="flex-1 flex items-center justify-center gap-1.5 text-xs text-red-600 bg-white border border-red-200 hover:bg-red-50 rounded-lg py-2 transition-colors shadow-sm">
                   <Trash2 className="w-3.5 h-3.5" /> Eliminar
                 </button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {showDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-bold">{showDetail.banco} — {showDetail.tipo}</h2>
+              <button onClick={() => setShowDetail(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 grid grid-cols-2 gap-4 text-sm">
+              {[
+                ['Titular', showDetail.titular],
+                ['Banco', showDetail.banco],
+                ['Tipo', showDetail.tipo],
+                ['No. Tarjeta', maskCard(showDetail.numero_tarjeta)],
+                ['Límite', formatCurrency(showDetail.limite)],
+                ['Saldo', formatCurrency(showDetail.saldo)],
+                ['Disponible', formatCurrency((parseFloat(showDetail.limite) || 0) - (parseFloat(showDetail.saldo) || 0))],
+                ['Día de Corte', showDetail.dia_corte || '—'],
+                ['Día de Pago', showDetail.dia_pago || '—'],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="text-xs text-gray-400">{k}</div>
+                  <div className="font-medium text-gray-900">{v}</div>
+                </div>
+              ))}
+              {showDetail.notas && (
+                <div className="col-span-2">
+                  <div className="text-xs text-gray-400">Notas</div>
+                  <div className="text-gray-700 text-xs">{showDetail.notas}</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

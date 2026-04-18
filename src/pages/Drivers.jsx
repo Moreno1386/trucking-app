@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Plus, Search, Edit, Trash2, X, AlertTriangle, Phone } from 'lucide-react';
+import { Users, Plus, Search, Edit, Trash2, X, AlertTriangle, Phone, Eye } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
 import { statusClass, statusLabel, formatDate, getDaysRemaining, daysRemainingClass } from '../utils/helpers';
 
@@ -24,7 +24,7 @@ const emptyForm = {
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent';
 
-function DriverCard({ driver, onEdit, onDelete }) {
+function DriverCard({ driver, onEdit, onDelete, onView }) {
   const days = getDaysRemaining(driver.licencia_vencimiento);
   const licExpired = days !== null && days < 0;
   const licSoon = days !== null && days >= 0 && days <= 30;
@@ -80,6 +80,12 @@ function DriverCard({ driver, onEdit, onDelete }) {
       {/* Actions */}
       <div className="flex gap-2 pt-3 border-t border-gray-50">
         <button
+          onClick={() => onView(driver)}
+          className="flex-1 flex items-center justify-center gap-1.5 text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg py-1.5 transition-colors"
+        >
+          <Eye className="w-3.5 h-3.5" /> Ver
+        </button>
+        <button
           onClick={() => onEdit(driver)}
           className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg py-1.5 transition-colors"
         >
@@ -101,6 +107,7 @@ export default function Drivers() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('Todos');
   const [showModal, setShowModal] = useState(false);
+  const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
@@ -208,8 +215,52 @@ export default function Drivers() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((d) => (
-            <DriverCard key={d.id} driver={d} onEdit={openEdit} onDelete={handleDelete} />
+            <DriverCard key={d.id} driver={d} onEdit={openEdit} onDelete={handleDelete} onView={setShowDetail} />
           ))}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {showDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-bold">{showDetail.nombre} {showDetail.apellido_paterno} {showDetail.apellido_materno}</h2>
+              <button onClick={() => setShowDetail(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 grid grid-cols-2 gap-4 text-sm max-h-[70vh] overflow-y-auto">
+              {[
+                ['No. Empleado', showDetail.numero_empleado],
+                ['Estado', statusLabel[showDetail.estado]],
+                ['Teléfono', showDetail.telefono || '—'],
+                ['Email', showDetail.email || '—'],
+                ['Licencia No.', showDetail.licencia_numero || '—'],
+                ['Tipo Licencia', showDetail.licencia_tipo || '—'],
+                ['Venc. Licencia', formatDate(showDetail.licencia_vencimiento)],
+                ['Fecha Ingreso', formatDate(showDetail.fecha_ingreso)],
+                ['Fecha Nacimiento', formatDate(showDetail.fecha_nacimiento)],
+                ['Contacto Emergencia', showDetail.contacto_emergencia_nombre || '—'],
+                ['Tel. Emergencia', showDetail.contacto_emergencia_telefono || '—'],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="text-xs text-gray-400">{k}</div>
+                  <div className="font-medium text-gray-900">{v}</div>
+                </div>
+              ))}
+              {showDetail.direccion && (
+                <div className="col-span-2">
+                  <div className="text-xs text-gray-400">Dirección</div>
+                  <div className="font-medium text-gray-900">{showDetail.direccion}</div>
+                </div>
+              )}
+              {showDetail.notas && (
+                <div className="col-span-2">
+                  <div className="text-xs text-gray-400">Notas</div>
+                  <div className="text-gray-700">{showDetail.notas}</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

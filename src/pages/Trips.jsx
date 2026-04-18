@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Route, Plus, Search, Edit, Trash2, X, MapPin, Calendar } from 'lucide-react';
+import { Route, Plus, Search, Edit, Trash2, X, MapPin, Calendar, Eye } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
 import { statusClass, statusLabel, formatDate, formatCurrency } from '../utils/helpers';
 
@@ -28,6 +28,7 @@ export default function Trips() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('Todos');
   const [showModal, setShowModal] = useState(false);
+  const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
@@ -192,6 +193,12 @@ export default function Trips() {
 
                 <div className="flex gap-2 mt-4 pt-3 border-t border-gray-50">
                   <button
+                    onClick={() => setShowDetail({ trip, truck, driver })}
+                    className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Ver
+                  </button>
+                  <button
                     onClick={() => openEdit(trip)}
                     className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg px-3 py-1.5 transition-colors"
                   >
@@ -207,6 +214,44 @@ export default function Trips() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {showDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-bold">Viaje {showDetail.trip.numero_viaje}</h2>
+              <button onClick={() => setShowDetail(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 grid grid-cols-2 gap-4 text-sm max-h-[70vh] overflow-y-auto">
+              {[
+                ['Estado', statusLabel[showDetail.trip.estado] || showDetail.trip.estado],
+                ['Cliente', showDetail.trip.cliente || '—'],
+                ['Origen', showDetail.trip.origen || '—'],
+                ['Destino', showDetail.trip.destino || '—'],
+                ['Unidad', showDetail.truck ? `Unidad ${showDetail.truck.numero_unidad} — ${showDetail.truck.marca}` : '—'],
+                ['Chofer', showDetail.driver ? `${showDetail.driver.nombre} ${showDetail.driver.apellido_paterno}` : '—'],
+                ['Fecha Salida', showDetail.trip.fecha_salida ? formatDate(showDetail.trip.fecha_salida.split('T')[0]) : '—'],
+                ['Llegada Est.', showDetail.trip.fecha_llegada_estimada ? formatDate(showDetail.trip.fecha_llegada_estimada.split('T')[0]) : '—'],
+                ['Llegada Real', showDetail.trip.fecha_llegada_real ? formatDate(showDetail.trip.fecha_llegada_real.split('T')[0]) : '—'],
+                ['Distancia', showDetail.trip.distancia_km ? `${showDetail.trip.distancia_km} km` : '—'],
+                ['Costo', formatCurrency(showDetail.trip.costo)],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="text-xs text-gray-400">{k}</div>
+                  <div className="font-medium text-gray-900">{v}</div>
+                </div>
+              ))}
+              {showDetail.trip.notas && (
+                <div className="col-span-2">
+                  <div className="text-xs text-gray-400">Notas</div>
+                  <div className="text-gray-700">{showDetail.trip.notas}</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
