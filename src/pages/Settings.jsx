@@ -16,7 +16,7 @@ export default function Settings() {
   }, []);
 
   const handleSave = () => {
-    saveWAConfig(config);
+    saveWAConfig({ phone: config.phone.trim(), apikey: config.apikey.trim() });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -85,28 +85,28 @@ export default function Settings() {
       {/* Formulario */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <Phone className="w-3.5 h-3.5" /> Número de WhatsApp (con código de país, sin +)
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Número de WhatsApp (con código de país, sin +)
           </label>
           <input
             type="text"
             placeholder="5213321786677"
             value={config.phone}
-            onChange={(e) => setConfig((c) => ({ ...c, phone: e.target.value.replace(/\D/g, '') }))}
+            onChange={(e) => setConfig((c) => ({ ...c, phone: e.target.value }))}
             className={inp}
           />
           <p className="text-xs text-gray-400 mt-1">Ejemplo: 5213321786677 (México +52, área 33, número)</p>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-            <Key className="w-3.5 h-3.5" /> API Key de CallMeBot
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            API Key de CallMeBot
           </label>
           <input
             type="text"
             placeholder="1234567"
             value={config.apikey}
-            onChange={(e) => setConfig((c) => ({ ...c, apikey: e.target.value.trim() }))}
+            onChange={(e) => setConfig((c) => ({ ...c, apikey: e.target.value }))}
             className={inp}
           />
         </div>
