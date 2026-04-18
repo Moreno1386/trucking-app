@@ -257,7 +257,7 @@ const useFleetStore = create((set, get) => ({
   },
 
   getAlerts: () => {
-    const { trucks, drivers } = get();
+    const { trucks, drivers, insurances, creditCards } = get();
     const alerts = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -309,6 +309,67 @@ const useFleetStore = create((set, get) => ({
           titulo: 'Licencia próxima a vencer',
           mensaje: fullName,
           detalle: `${driver.numero_empleado} — Vence en ${days} días`,
+        });
+      }
+    });
+
+    // ── Seguros ──────────────────────────────────────────────────
+    insurances.forEach((ins) => {
+      if (!ins.fecha_vencimiento || ins.estado !== 'activo') return;
+      const exp = new Date(ins.fecha_vencimiento + 'T12:00:00');
+      const days = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+      if (days < 0) {
+        alerts.push({
+          id: `ins-expired-${ins.id}`,
+          type: 'insurance_expired',
+          severity: 'high',
+          titulo: 'Póliza de seguro VENCIDA',
+          mensaje: `${ins.aseguradora} — Póliza ${ins.numero_poliza}`,
+          detalle: `Venció el ${exp.toLocaleDateString('es-MX')}`,
+        });
+      } else if (days <= 30) {
+        alerts.push({
+          id: `ins-soon-${ins.id}`,
+          type: 'insurance_soon',
+          severity: 'medium',
+          titulo: 'Póliza próxima a vencer',
+          mensaje: `${ins.aseguradora} — Póliza ${ins.numero_poliza}`,
+          detalle: `Vence en ${days} días (${exp.toLocaleDateString('es-MX')})`,
+        });
+      }
+    });
+
+    // ── Tarjetas de crédito ───────────────────────────────────────
+    creditCards.forEach((card) => {
+      if (!card.dia_pago) return;
+      const currentDay = today.getDate();
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+      let dueDate;
+      if (card.dia_pago >= currentDay) {
+        dueDate = new Date(currentYear, currentMonth, card.dia_pago);
+      } else {
+        dueDate = new Date(currentYear, currentMonth + 1, card.dia_pago);
+      }
+      const days = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+      const last4 = String(card.numero_tarjeta).slice(-4);
+      if (days === 0) {
+        alerts.push({
+          id: `card-today-${card.id}`,
+          type: 'card_due_today',
+          severity: 'high',
+          titulo: 'Pago de tarjeta HOY',
+          mensaje: `${card.banco} ${card.tipo} ****${last4}`,
+          detalle: `Saldo: $${Number(card.saldo).toLocaleString('es-MX')}`,
+        });
+      } else if (days <= 5) {
+        alerts.push({
+          id: `card-soon-${card.id}`,
+          type: 'card_due_soon',
+          severity: 'medium',
+          titulo: 'Pago de tarjeta próximo',
+          mensaje: `${card.banco} ${card.tipo} ****${last4}`,
+          detalle: `Vence en ${days} días — Saldo: $${Number(card.saldo).toLocaleString('es-MX')}`,
         });
       }
     });

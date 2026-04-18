@@ -71,10 +71,14 @@ function SidebarContent({ onNav }) {
           <div className="text-red-300 text-xs capitalize">{user?.role}</div>
         </div>
         <div className="flex gap-2">
-          <button className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-800 rounded-lg px-2 py-1.5 text-xs text-white transition-colors">
+          <NavLink
+            to="/settings"
+            onClick={onNav}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-800 rounded-lg px-2 py-1.5 text-xs text-white transition-colors"
+          >
             <Settings className="w-3 h-3" />
             Configuración
-          </button>
+          </NavLink>
           <button
             onClick={handleLogout}
             className="flex-1 flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-800 rounded-lg px-2 py-1.5 text-xs text-white transition-colors"
