@@ -34,7 +34,7 @@ function SidebarContent({ onNav }) {
         <img
           src="/logo.png"
           alt="Chaires Trucking"
-          className="h-16 w-auto object-contain rounded-lg"
+          className="h-28 w-auto object-contain rounded-lg"
         />
       </div>
 
