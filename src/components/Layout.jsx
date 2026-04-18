@@ -30,16 +30,12 @@ function SidebarContent({ onNav }) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-red-600">
-        <div className="flex items-center gap-3">
-          <div className="bg-red-900 rounded-lg p-2">
-            <Truck className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <div className="font-bold text-base leading-tight text-white">Chaires Trucking</div>
-            <div className="text-xs text-red-200">Sistema de Gestión</div>
-          </div>
-        </div>
+      <div className="px-4 py-4 border-b border-red-600 flex items-center justify-center">
+        <img
+          src="/logo.png"
+          alt="Chaires Trucking"
+          className="h-16 w-auto object-contain rounded-lg"
+        />
       </div>
 
       {/* Nav */}
@@ -126,7 +122,7 @@ export default function Layout() {
           <button onClick={() => setOpen(true)}>
             <Menu className="w-6 h-6" />
           </button>
-          <span className="font-bold text-sm">Chaires Trucking</span>
+          <img src="/logo.png" alt="Chaires Trucking" className="h-8 w-auto object-contain rounded" />
         </div>
 
         <div className="flex-1 overflow-auto">
