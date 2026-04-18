@@ -116,17 +116,21 @@ const useFleetStore = create((set, get) => ({
   // ── Trucks ───────────────────────────────────────────────────
   addTruck: async (data) => {
     const truck = { ...data, id: newId(), created_at: now(), updated_at: now() };
+    const { error } = await supabase.from('trucks').insert(truck);
+    if (error) { alert('Error al guardar camión: ' + error.message); return false; }
     set((s) => ({ trucks: [...s.trucks, truck] }));
-    await supabase.from('trucks').insert(truck);
+    return true;
   },
   updateTruck: async (id, data) => {
     const updated = { ...data, updated_at: now() };
+    const { error } = await supabase.from('trucks').update(updated).eq('id', id);
+    if (error) { alert('Error al actualizar camión: ' + error.message); return; }
     set((s) => ({ trucks: s.trucks.map((t) => (t.id === id ? { ...t, ...updated } : t)) }));
-    await supabase.from('trucks').update(updated).eq('id', id);
   },
   deleteTruck: async (id) => {
+    const { error } = await supabase.from('trucks').delete().eq('id', id);
+    if (error) { alert('Error al eliminar camión: ' + error.message); return; }
     set((s) => ({ trucks: s.trucks.filter((t) => t.id !== id) }));
-    await supabase.from('trucks').delete().eq('id', id);
   },
 
   // ── Drivers ──────────────────────────────────────────────────
@@ -154,61 +158,77 @@ const useFleetStore = create((set, get) => ({
   // ── Trips ────────────────────────────────────────────────────
   addTrip: async (data) => {
     const trip = { ...data, id: newId(), created_at: now() };
+    const { error } = await supabase.from('trips').insert(trip);
+    if (error) { alert('Error al guardar viaje: ' + error.message); return false; }
     set((s) => ({ trips: [...s.trips, trip] }));
-    await supabase.from('trips').insert(trip);
+    return true;
   },
   updateTrip: async (id, data) => {
+    const { error } = await supabase.from('trips').update(data).eq('id', id);
+    if (error) { alert('Error al actualizar viaje: ' + error.message); return; }
     set((s) => ({ trips: s.trips.map((t) => (t.id === id ? { ...t, ...data } : t)) }));
-    await supabase.from('trips').update(data).eq('id', id);
   },
   deleteTrip: async (id) => {
+    const { error } = await supabase.from('trips').delete().eq('id', id);
+    if (error) { alert('Error al eliminar viaje: ' + error.message); return; }
     set((s) => ({ trips: s.trips.filter((t) => t.id !== id) }));
-    await supabase.from('trips').delete().eq('id', id);
   },
 
   // ── Maintenance ──────────────────────────────────────────────
   addMaintenance: async (data) => {
     const record = { ...data, id: newId(), created_at: now() };
+    const { error } = await supabase.from('maintenance').insert(record);
+    if (error) { alert('Error al guardar mantenimiento: ' + error.message); return false; }
     set((s) => ({ maintenance: [...s.maintenance, record] }));
-    await supabase.from('maintenance').insert(record);
+    return true;
   },
   updateMaintenance: async (id, data) => {
+    const { error } = await supabase.from('maintenance').update(data).eq('id', id);
+    if (error) { alert('Error al actualizar mantenimiento: ' + error.message); return; }
     set((s) => ({ maintenance: s.maintenance.map((m) => (m.id === id ? { ...m, ...data } : m)) }));
-    await supabase.from('maintenance').update(data).eq('id', id);
   },
   deleteMaintenance: async (id) => {
+    const { error } = await supabase.from('maintenance').delete().eq('id', id);
+    if (error) { alert('Error al eliminar mantenimiento: ' + error.message); return; }
     set((s) => ({ maintenance: s.maintenance.filter((m) => m.id !== id) }));
-    await supabase.from('maintenance').delete().eq('id', id);
   },
 
   // ── Insurances ───────────────────────────────────────────────
   addInsurance: async (data) => {
     const ins = { ...data, id: newId(), created_at: now() };
+    const { error } = await supabase.from('insurances').insert(ins);
+    if (error) { alert('Error al guardar seguro: ' + error.message); return false; }
     set((s) => ({ insurances: [...s.insurances, ins] }));
-    await supabase.from('insurances').insert(ins);
+    return true;
   },
   updateInsurance: async (id, data) => {
+    const { error } = await supabase.from('insurances').update(data).eq('id', id);
+    if (error) { alert('Error al actualizar seguro: ' + error.message); return; }
     set((s) => ({ insurances: s.insurances.map((i) => (i.id === id ? { ...i, ...data } : i)) }));
-    await supabase.from('insurances').update(data).eq('id', id);
   },
   deleteInsurance: async (id) => {
+    const { error } = await supabase.from('insurances').delete().eq('id', id);
+    if (error) { alert('Error al eliminar seguro: ' + error.message); return; }
     set((s) => ({ insurances: s.insurances.filter((i) => i.id !== id) }));
-    await supabase.from('insurances').delete().eq('id', id);
   },
 
   // ── Credit Cards ─────────────────────────────────────────────
   addCreditCard: async (data) => {
     const card = { ...data, id: newId(), created_at: now() };
+    const { error } = await supabase.from('credit_cards').insert(card);
+    if (error) { alert('Error al guardar tarjeta: ' + error.message); return false; }
     set((s) => ({ creditCards: [...s.creditCards, card] }));
-    await supabase.from('credit_cards').insert(card);
+    return true;
   },
   updateCreditCard: async (id, data) => {
+    const { error } = await supabase.from('credit_cards').update(data).eq('id', id);
+    if (error) { alert('Error al actualizar tarjeta: ' + error.message); return; }
     set((s) => ({ creditCards: s.creditCards.map((c) => (c.id === id ? { ...c, ...data } : c)) }));
-    await supabase.from('credit_cards').update(data).eq('id', id);
   },
   deleteCreditCard: async (id) => {
+    const { error } = await supabase.from('credit_cards').delete().eq('id', id);
+    if (error) { alert('Error al eliminar tarjeta: ' + error.message); return; }
     set((s) => ({ creditCards: s.creditCards.filter((c) => c.id !== id) }));
-    await supabase.from('credit_cards').delete().eq('id', id);
   },
 
   // ── Dispatch / Turns ─────────────────────────────────────────
