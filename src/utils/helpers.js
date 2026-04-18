@@ -70,4 +70,4 @@ export const maskCard = (num) => {
   return clean.slice(0, 4) + ' **** **** ' + clean.slice(-4);
 };
 
-export const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+export const newId = () => crypto.randomUUID();

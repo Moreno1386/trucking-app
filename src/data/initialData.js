@@ -1,6 +1,13 @@
+// IDs fijos en formato UUID válido para Supabase
+const T1 = '11111111-0000-0000-0000-000000000001';
+const T2 = '11111111-0000-0000-0000-000000000002';
+const T3 = '11111111-0000-0000-0000-000000000003';
+const T4 = '11111111-0000-0000-0000-000000000004';
+const T5 = '11111111-0000-0000-0000-000000000005';
+
 export const initialTrucks = [
   {
-    id: 't1',
+    id: T1,
     numero_unidad: '10',
     marca: 'VOLKSWAGEN',
     modelo: 'DELIVERY',
@@ -19,7 +26,7 @@ export const initialTrucks = [
     updated_at: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 't2',
+    id: T2,
     numero_unidad: '11',
     marca: 'VOLKSWAGEN',
     modelo: 'DELIVERY',
@@ -38,7 +45,7 @@ export const initialTrucks = [
     updated_at: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 't3',
+    id: T3,
     numero_unidad: '16',
     marca: 'FREIGHTLINER',
     modelo: 'M2',
@@ -57,7 +64,7 @@ export const initialTrucks = [
     updated_at: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 't4',
+    id: T4,
     numero_unidad: '23',
     marca: 'VOLVO',
     modelo: 'VNL',
@@ -76,7 +83,7 @@ export const initialTrucks = [
     updated_at: '2024-01-01T00:00:00.000Z',
   },
   {
-    id: 't5',
+    id: T5,
     numero_unidad: '78',
     marca: 'INTERNATIONAL',
     modelo: 'LT',
@@ -98,7 +105,7 @@ export const initialTrucks = [
 
 export const initialDrivers = [
   {
-    id: 'd1',
+    id: '22222222-0000-0000-0000-000000000001',
     numero_empleado: 'CH-001',
     nombre: 'JOSE ANTONIO',
     apellido_paterno: 'GUTIERREZ',
@@ -118,7 +125,7 @@ export const initialDrivers = [
     notas: '',
   },
   {
-    id: 'd2',
+    id: '22222222-0000-0000-0000-000000000002',
     numero_empleado: 'CH-002',
     nombre: 'LUIS FERNANDO',
     apellido_paterno: 'REYES',
@@ -138,7 +145,7 @@ export const initialDrivers = [
     notas: '',
   },
   {
-    id: 'd3',
+    id: '22222222-0000-0000-0000-000000000003',
     numero_empleado: 'CH-003',
     nombre: 'Ivan',
     apellido_paterno: 'Hernandez',
@@ -158,7 +165,7 @@ export const initialDrivers = [
     notas: '',
   },
   {
-    id: 'd4',
+    id: '22222222-0000-0000-0000-000000000004',
     numero_empleado: 'CH-004',
     nombre: 'Ulises',
     apellido_paterno: 'Rivera',
@@ -178,7 +185,7 @@ export const initialDrivers = [
     notas: '',
   },
   {
-    id: 'd5',
+    id: '22222222-0000-0000-0000-000000000005',
     numero_empleado: 'CH-005',
     nombre: 'Jonathan',
     apellido_paterno: 'Reyes',
@@ -198,7 +205,7 @@ export const initialDrivers = [
     notas: 'ALERTA: Licencia vencida',
   },
   {
-    id: 'd6',
+    id: '22222222-0000-0000-0000-000000000006',
     numero_empleado: 'CH-006',
     nombre: 'ERNESTO',
     apellido_paterno: 'DOMINGUEZ',
@@ -218,7 +225,7 @@ export const initialDrivers = [
     notas: '',
   },
   {
-    id: 'd7',
+    id: '22222222-0000-0000-0000-000000000007',
     numero_empleado: 'CH-007',
     nombre: 'Roberto',
     apellido_paterno: 'Martinez',
@@ -241,10 +248,10 @@ export const initialDrivers = [
 
 export const initialInsurances = [
   {
-    id: 'i1',
+    id: '33333333-0000-0000-0000-000000000001',
     aseguradora: 'QUALITAS',
     numero_poliza: '1340407361',
-    camion_id: 't3',
+    camion_id: T3,
     tipo_cobertura: 'Amplia',
     fecha_inicio: '2025-06-11',
     fecha_vencimiento: '2026-06-11',
@@ -254,10 +261,10 @@ export const initialInsurances = [
     notas: '',
   },
   {
-    id: 'i2',
+    id: '33333333-0000-0000-0000-000000000002',
     aseguradora: 'QUALITAS',
     numero_poliza: '1340252959',
-    camion_id: 't2',
+    camion_id: T2,
     tipo_cobertura: 'Amplia',
     fecha_inicio: '2023-12-28',
     fecha_vencimiento: '2026-12-28',
@@ -267,10 +274,10 @@ export const initialInsurances = [
     notas: '',
   },
   {
-    id: 'i3',
+    id: '33333333-0000-0000-0000-000000000003',
     aseguradora: 'QUALITAS',
     numero_poliza: '1340342550',
-    camion_id: 't1',
+    camion_id: T1,
     tipo_cobertura: 'Amplia',
     fecha_inicio: '2025-04-15',
     fecha_vencimiento: '2026-04-15',
@@ -283,7 +290,7 @@ export const initialInsurances = [
 
 export const initialCreditCards = [
   {
-    id: 'cc1',
+    id: '44444444-0000-0000-0000-000000000001',
     titular: 'IGNACIO M GOMEZ CHAIRES',
     numero_tarjeta: '5491380221173652',
     banco: 'Banamex',
@@ -295,7 +302,7 @@ export const initialCreditCards = [
     notas: 'Tarjeta de Credito PLATINUM BANAMEX pago para no generar intereses: $20,240.27',
   },
   {
-    id: 'cc2',
+    id: '44444444-0000-0000-0000-000000000002',
     titular: 'IGNACIO M GOMEZ CHAIRES',
     numero_tarjeta: '4037070144863679',
     banco: 'Banamex',
