@@ -23,66 +23,86 @@ const useFleetStore = create((set, get) => ({
   // ── Cargar todos los datos desde Supabase ────────────────────
   fetchAll: async () => {
     set({ isLoading: true });
-    try {
-      const [
-        { data: trucks },
-        { data: drivers },
-        { data: trips },
-        { data: maintenance },
-        { data: insurances },
-        { data: creditCards },
-        { data: turns },
-      ] = await Promise.all([
-        supabase.from('trucks').select('*').order('created_at'),
-        supabase.from('drivers').select('*').order('created_at'),
-        supabase.from('trips').select('*').order('created_at'),
-        supabase.from('maintenance').select('*').order('created_at'),
-        supabase.from('insurances').select('*').order('created_at'),
-        supabase.from('credit_cards').select('*').order('created_at'),
-        supabase.from('turns').select('*').order('timestamp'),
+
+    const [t, d, tr, m, i, cc, tu] = await Promise.all([
+      supabase.from('trucks').select('*').order('created_at'),
+      supabase.from('drivers').select('*').order('created_at'),
+      supabase.from('trips').select('*').order('created_at'),
+      supabase.from('maintenance').select('*').order('created_at'),
+      supabase.from('insurances').select('*').order('created_at'),
+      supabase.from('credit_cards').select('*').order('created_at'),
+      supabase.from('turns').select('*').order('timestamp'),
+    ]);
+
+    const trucks = t.data || [];
+    const drivers = d.data || [];
+
+    // Si no hay camiones, insertar datos iniciales
+    if (trucks.length === 0) {
+      await Promise.allSettled([
+        supabase.from('trucks').insert(initialTrucks),
+        supabase.from('drivers').insert(initialDrivers),
+        supabase.from('insurances').insert(initialInsurances),
+        supabase.from('credit_cards').insert(initialCreditCards),
       ]);
 
-      // Si las tablas están vacías, cargar datos iniciales
-      const trucksData = trucks?.length ? trucks : [];
-      const driversData = drivers?.length ? drivers : [];
-      const insurancesData = insurances?.length ? insurances : [];
-      const creditCardsData = creditCards?.length ? creditCards : [];
-
-      if (!trucks?.length) await get().seedInitialData();
+      const [t2, d2, i2, cc2] = await Promise.all([
+        supabase.from('trucks').select('*').order('created_at'),
+        supabase.from('drivers').select('*').order('created_at'),
+        supabase.from('insurances').select('*').order('created_at'),
+        supabase.from('credit_cards').select('*').order('created_at'),
+      ]);
 
       set({
-        trucks: trucksData,
-        drivers: driversData,
-        trips: trips || [],
-        maintenance: maintenance || [],
-        insurances: insurancesData,
-        creditCards: creditCardsData,
-        turns: turns || [],
+        trucks: t2.data || [],
+        drivers: d2.data || [],
+        trips: tr.data || [],
+        maintenance: m.data || [],
+        insurances: i2.data || [],
+        creditCards: cc2.data || [],
+        turns: tu.data || [],
         isLoading: false,
       });
-
-      // Re-fetch después de seed
-      if (!trucks?.length) {
-        const { data: t } = await supabase.from('trucks').select('*').order('created_at');
-        const { data: d } = await supabase.from('drivers').select('*').order('created_at');
-        const { data: i } = await supabase.from('insurances').select('*').order('created_at');
-        const { data: cc } = await supabase.from('credit_cards').select('*').order('created_at');
-        set({ trucks: t || [], drivers: d || [], insurances: i || [], creditCards: cc || [] });
-      }
-    } catch (err) {
-      console.error('Error cargando datos:', err);
-      set({ isLoading: false });
+    } else {
+      set({
+        trucks,
+        drivers,
+        trips: tr.data || [],
+        maintenance: m.data || [],
+        insurances: i.data || [],
+        creditCards: cc.data || [],
+        turns: tu.data || [],
+        isLoading: false,
+      });
     }
   },
 
-  // ── Insertar datos iniciales si las tablas están vacías ──────
-  seedInitialData: async () => {
-    await Promise.all([
-      supabase.from('trucks').insert(initialTrucks),
-      supabase.from('drivers').insert(initialDrivers),
-      supabase.from('insurances').insert(initialInsurances),
-      supabase.from('credit_cards').insert(initialCreditCards),
-    ]);
+  // ── Tiempo real (Supabase Realtime) ──────────────────────────
+  subscribeToRealtime: () => {
+    const refresh = async (table, key, orderBy = 'created_at') => {
+      const { data } = await supabase.from(table).select('*').order(orderBy);
+      if (data) set({ [key]: data });
+    };
+
+    const channel = supabase
+      .channel('realtime-fleet')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trucks' },
+        () => refresh('trucks', 'trucks'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' },
+        () => refresh('drivers', 'drivers'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' },
+        () => refresh('trips', 'trips'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'maintenance' },
+        () => refresh('maintenance', 'maintenance'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'insurances' },
+        () => refresh('insurances', 'insurances'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'credit_cards' },
+        () => refresh('credit_cards', 'creditCards'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'turns' },
+        () => refresh('turns', 'turns', 'timestamp'))
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
   },
 
   // ── Trucks ───────────────────────────────────────────────────
@@ -93,9 +113,7 @@ const useFleetStore = create((set, get) => ({
   },
   updateTruck: async (id, data) => {
     const updated = { ...data, updated_at: now() };
-    set((s) => ({
-      trucks: s.trucks.map((t) => (t.id === id ? { ...t, ...updated } : t)),
-    }));
+    set((s) => ({ trucks: s.trucks.map((t) => (t.id === id ? { ...t, ...updated } : t)) }));
     await supabase.from('trucks').update(updated).eq('id', id);
   },
   deleteTruck: async (id) => {
@@ -110,10 +128,8 @@ const useFleetStore = create((set, get) => ({
     await supabase.from('drivers').insert(driver);
   },
   updateDriver: async (id, data) => {
-    set((s) => ({
-      drivers: s.drivers.map((d) => (d.id === id ? { ...d, ...data, updated_at: now() } : d)),
-    }));
-    await supabase.from('drivers').update({ ...data, updated_at: now() }).eq('id', id);
+    set((s) => ({ drivers: s.drivers.map((d) => (d.id === id ? { ...d, ...data } : d)) }));
+    await supabase.from('drivers').update(data).eq('id', id);
   },
   deleteDriver: async (id) => {
     set((s) => ({ drivers: s.drivers.filter((d) => d.id !== id) }));
@@ -142,9 +158,7 @@ const useFleetStore = create((set, get) => ({
     await supabase.from('maintenance').insert(record);
   },
   updateMaintenance: async (id, data) => {
-    set((s) => ({
-      maintenance: s.maintenance.map((m) => (m.id === id ? { ...m, ...data } : m)),
-    }));
+    set((s) => ({ maintenance: s.maintenance.map((m) => (m.id === id ? { ...m, ...data } : m)) }));
     await supabase.from('maintenance').update(data).eq('id', id);
   },
   deleteMaintenance: async (id) => {
@@ -159,9 +173,7 @@ const useFleetStore = create((set, get) => ({
     await supabase.from('insurances').insert(ins);
   },
   updateInsurance: async (id, data) => {
-    set((s) => ({
-      insurances: s.insurances.map((i) => (i.id === id ? { ...i, ...data } : i)),
-    }));
+    set((s) => ({ insurances: s.insurances.map((i) => (i.id === id ? { ...i, ...data } : i)) }));
     await supabase.from('insurances').update(data).eq('id', id);
   },
   deleteInsurance: async (id) => {
@@ -176,9 +188,7 @@ const useFleetStore = create((set, get) => ({
     await supabase.from('credit_cards').insert(card);
   },
   updateCreditCard: async (id, data) => {
-    set((s) => ({
-      creditCards: s.creditCards.map((c) => (c.id === id ? { ...c, ...data } : c)),
-    }));
+    set((s) => ({ creditCards: s.creditCards.map((c) => (c.id === id ? { ...c, ...data } : c)) }));
     await supabase.from('credit_cards').update(data).eq('id', id);
   },
   deleteCreditCard: async (id) => {
@@ -206,9 +216,7 @@ const useFleetStore = create((set, get) => ({
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     if (!pending.length) return null;
     const next = pending[0];
-    set((s) => ({
-      turns: s.turns.map((t) => (t.id === next.id ? { ...t, estado: 'asignado' } : t)),
-    }));
+    set((s) => ({ turns: s.turns.map((t) => (t.id === next.id ? { ...t, estado: 'asignado' } : t)) }));
     await supabase.from('turns').update({ estado: 'asignado' }).eq('id', next.id);
     return next.driver_id;
   },
@@ -249,7 +257,7 @@ const useFleetStore = create((set, get) => ({
           type: 'oil_overdue',
           severity: 'high',
           titulo: 'Cambio de aceite VENCIDO',
-          mensaje: `Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo} ${truck.año}`,
+          mensaje: `Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo} ${truck.anio}`,
           detalle: `Vencido por ${Math.abs(remaining).toLocaleString('es-MX')} km`,
         });
       } else if (remaining <= 2000) {
@@ -258,7 +266,7 @@ const useFleetStore = create((set, get) => ({
           type: 'oil_soon',
           severity: 'medium',
           titulo: 'Cambio de aceite próximo',
-          mensaje: `Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo} ${truck.año}`,
+          mensaje: `Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo} ${truck.anio}`,
           detalle: `Faltan ${remaining.toLocaleString('es-MX')} km`,
         });
       }

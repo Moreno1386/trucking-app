@@ -96,7 +96,7 @@ export default function Insurance() {
                 <div className="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-sm">
                   <span className="text-gray-500 text-xs">Unidad: </span>
                   <span className="font-medium text-gray-800">
-                    {truck ? `Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo} ${truck.año}` : 'No asignada'}
+                    {truck ? `Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo} ${truck.anio}` : 'No asignada'}
                   </span>
                 </div>
 

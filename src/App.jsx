@@ -20,10 +20,14 @@ function Protected({ children }) {
 
 function AppLoader({ children }) {
   const fetchAll = useFleetStore((s) => s.fetchAll);
+  const subscribeToRealtime = useFleetStore((s) => s.subscribeToRealtime);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    if (isAuthenticated) fetchAll();
+    if (!isAuthenticated) return;
+    fetchAll();
+    const unsubscribe = subscribeToRealtime();
+    return unsubscribe;
   }, [isAuthenticated]);
 
   return children;

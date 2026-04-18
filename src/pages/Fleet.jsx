@@ -11,7 +11,7 @@ const emptyForm = {
   numero_unidad: '',
   marca: '',
   modelo: '',
-  año: new Date().getFullYear(),
+  anio: new Date().getFullYear(),
   placa: '',
   vin: '',
   capacidad_carga: '',
@@ -73,7 +73,7 @@ function TruckCard({ truck, onEdit, onDelete, onView }) {
 
       {/* Info grid */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600 mb-2">
-        <div><span className="text-gray-400">Año:</span> {truck.año}</div>
+        <div><span className="text-gray-400">Año:</span> {truck.anio}</div>
         <div><span className="text-gray-400">Placa:</span> {truck.placa || '—'}</div>
         <div><span className="text-gray-400">Km:</span> {formatNumber(truck.kilometraje_actual)}</div>
         <div><span className="text-gray-400">Cap:</span> {formatNumber(truck.capacidad_carga)} kg</div>
@@ -178,7 +178,7 @@ export default function Fleet() {
     e.preventDefault();
     const data = {
       ...form,
-      año: parseInt(form.año) || new Date().getFullYear(),
+      anio: parseInt(form.anio) || new Date().getFullYear(),
       capacidad_carga: parseFloat(form.capacidad_carga) || 0,
       kilometraje_actual: parseFloat(form.kilometraje_actual) || 0,
       ultimo_cambio_aceite: parseFloat(form.ultimo_cambio_aceite) || 0,
@@ -280,7 +280,7 @@ export default function Fleet() {
               {[
                 ['Marca', showDetail.marca],
                 ['Modelo', showDetail.modelo],
-                ['Año', showDetail.año],
+                ['Año', showDetail.anio],
                 ['Placa', showDetail.placa || '—'],
                 ['VIN', showDetail.vin || '—'],
                 ['Capacidad', `${formatNumber(showDetail.capacidad_carga)} kg`],

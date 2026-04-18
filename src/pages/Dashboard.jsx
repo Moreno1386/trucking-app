@@ -90,7 +90,7 @@ export default function Dashboard() {
                         Unidad {truck.numero_unidad}
                       </span>
                       <span className="text-gray-500 text-xs">
-                        {truck.marca} {truck.modelo} {truck.año}
+                        {truck.marca} {truck.modelo} {truck.anio}
                       </span>
                       {truck.placa && (
                         <span className="text-gray-400 text-xs">• {truck.placa}</span>
