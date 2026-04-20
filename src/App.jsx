@@ -13,7 +13,7 @@ import Maintenance from './pages/Maintenance';
 import Insurance from './pages/Insurance';
 import CreditCards from './pages/CreditCards';
 import Settings from './pages/Settings';
-import { getWAConfig, sendWhatsApp, getLastSentDate, setLastSentDate, todayStr } from './utils/whatsapp';
+import { getTGConfig, sendTelegram, getLastSentDate, setLastSentDate, todayStr } from './utils/telegram';
 
 function Protected({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -32,8 +32,8 @@ function AppLoader({ children }) {
       // Notificaciones automáticas: una vez por día
       const today = todayStr();
       if (getLastSentDate() === today) return;
-      const { phone, apikey } = getWAConfig();
-      if (!phone || !apikey) return;
+      const { token, chatId } = getTGConfig();
+      if (!token || !chatId) return;
       const alerts = getAlerts();
       if (alerts.length === 0) return;
       const lines = ['🚨 *Chaires Trucking — Alertas del día*', ''];
@@ -44,7 +44,7 @@ function AppLoader({ children }) {
         lines.push(`   ${a.detalle}`);
         lines.push('');
       });
-      sendWhatsApp(phone, apikey, lines.join('\n')).then((ok) => {
+      sendTelegram(token, chatId, lines.join('\n')).then((ok) => {
         if (ok) setLastSentDate(today);
       });
     });

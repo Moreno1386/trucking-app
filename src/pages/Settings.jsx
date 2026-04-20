@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Phone, Key, Send, CheckCircle, AlertCircle, Info } from 'lucide-react';
-import { getWAConfig, saveWAConfig, sendWhatsApp } from '../utils/whatsapp';
+import { Settings as SettingsIcon, Key, Send, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { getTGConfig, saveTGConfig, sendTelegram } from '../utils/telegram';
 import { supabase } from '../lib/supabase';
 import useFleetStore from '../store/useFleetStore';
 
@@ -8,41 +8,40 @@ const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ou
 
 export default function Settings() {
   const getAlerts = useFleetStore((s) => s.getAlerts);
-  const [config, setConfig] = useState({ phone: '', apikey: '' });
-  const [status, setStatus] = useState(null); // 'sending' | 'ok' | 'error'
+  const [config, setConfig] = useState({ token: '', chatId: '' });
+  const [status, setStatus] = useState(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setConfig(getWAConfig());
+    setConfig(getTGConfig());
   }, []);
 
   const handleSave = async () => {
-    const cfg = { phone: config.phone.trim(), apikey: config.apikey.trim() };
-    saveWAConfig(cfg);
-    // Guardar también en Supabase para notificaciones automáticas
-    await supabase.from('settings').upsert({ key: 'wa_config', value: cfg });
+    const cfg = { token: config.token.trim(), chatId: config.chatId.trim() };
+    saveTGConfig(cfg);
+    await supabase.from('settings').upsert({ key: 'tg_config', value: cfg });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
   const handleTest = async () => {
-    if (!config.phone || !config.apikey) {
-      alert('Ingresa teléfono y API key primero.');
+    if (!config.token || !config.chatId) {
+      alert('Ingresa el Token y Chat ID primero.');
       return;
     }
     setStatus('sending');
-    const ok = await sendWhatsApp(
-      config.phone,
-      config.apikey,
-      '✅ Chaires Trucking: Notificaciones de WhatsApp configuradas correctamente.'
+    const ok = await sendTelegram(
+      config.token,
+      config.chatId,
+      '✅ *Chaires Trucking*: Notificaciones de Telegram configuradas correctamente.'
     );
     setStatus(ok ? 'ok' : 'error');
     setTimeout(() => setStatus(null), 4000);
   };
 
   const handleSendNow = async () => {
-    if (!config.phone || !config.apikey) {
-      alert('Configura tu teléfono y API key primero.');
+    if (!config.token || !config.chatId) {
+      alert('Configura el Token y Chat ID primero.');
       return;
     }
     const alerts = getAlerts();
@@ -59,7 +58,7 @@ export default function Settings() {
       lines.push(`   ${a.detalle}`);
       lines.push('');
     });
-    const ok = await sendWhatsApp(config.phone, config.apikey, lines.join('\n'));
+    const ok = await sendTelegram(config.token, config.chatId, lines.join('\n'));
     setStatus(ok ? 'ok' : 'error');
     setTimeout(() => setStatus(null), 4000);
   };
@@ -70,19 +69,22 @@ export default function Settings() {
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <SettingsIcon className="w-6 h-6" /> Configuración
         </h1>
-        <p className="text-gray-500 text-sm">Notificaciones de WhatsApp vía CallMeBot</p>
+        <p className="text-gray-500 text-sm">Notificaciones automáticas vía Telegram</p>
       </div>
 
       {/* Instrucciones */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
         <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
-          <Info className="w-4 h-4" /> Cómo obtener tu API key de CallMeBot
+          <Info className="w-4 h-4" /> Cómo configurar tu bot de Telegram (gratis)
         </div>
-        <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-          <li>Guarda el número <strong>+34 644 597 079</strong> en tus contactos como "CallMeBot"</li>
-          <li>Manda un WhatsApp a ese número con el texto: <strong>I allow callmebot to send me messages</strong></li>
-          <li>Recibirás tu API key en unos segundos</li>
-          <li>Pega el teléfono y la API key abajo y guarda</li>
+        <ol className="text-sm text-blue-700 space-y-2 list-decimal list-inside">
+          <li>Abre Telegram y busca <strong>@BotFather</strong></li>
+          <li>Mándale el mensaje: <strong>/newbot</strong></li>
+          <li>Te pide nombre → escribe: <strong>Chaires Trucking</strong></li>
+          <li>Te pide username → escribe algo como: <strong>chairestrucking_bot</strong></li>
+          <li>Te dará un <strong>Token</strong> — cópialo y pégalo abajo</li>
+          <li>Busca <strong>@userinfobot</strong> en Telegram y mándale cualquier mensaje</li>
+          <li>Te responde con tu <strong>Chat ID</strong> — cópialo y pégalo abajo</li>
         </ol>
       </div>
 
@@ -90,27 +92,26 @@ export default function Settings() {
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
-            Número de WhatsApp (con código de país, sin +)
+            Token del Bot (de @BotFather)
           </label>
           <input
             type="text"
-            placeholder="5213321786677"
-            value={config.phone}
-            onChange={(e) => setConfig((c) => ({ ...c, phone: e.target.value }))}
+            placeholder="123456789:AABBccDDeeFFggHHii..."
+            value={config.token}
+            onChange={(e) => setConfig((c) => ({ ...c, token: e.target.value }))}
             className={inp}
           />
-          <p className="text-xs text-gray-400 mt-1">Ejemplo: 5213321786677 (México +52, área 33, número)</p>
         </div>
 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
-            API Key de CallMeBot
+            Chat ID (de @userinfobot)
           </label>
           <input
             type="text"
-            placeholder="1234567"
-            value={config.apikey}
-            onChange={(e) => setConfig((c) => ({ ...c, apikey: e.target.value }))}
+            placeholder="123456789"
+            value={config.chatId}
+            onChange={(e) => setConfig((c) => ({ ...c, chatId: e.target.value }))}
             className={inp}
           />
         </div>
@@ -134,39 +135,39 @@ export default function Settings() {
 
         {status === 'ok' && (
           <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm">
-            <CheckCircle className="w-4 h-4" /> Mensaje enviado correctamente
+            <CheckCircle className="w-4 h-4" /> Mensaje enviado correctamente a Telegram
           </div>
         )}
         {status === 'error' && (
           <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm">
-            <AlertCircle className="w-4 h-4" /> Error al enviar. Verifica el teléfono y API key.
+            <AlertCircle className="w-4 h-4" /> Error al enviar. Verifica el Token y Chat ID.
           </div>
         )}
       </div>
 
-      {/* Enviar alertas ahora */}
+      {/* Enviar ahora */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
         <h2 className="font-semibold text-gray-800 mb-1">Enviar alertas ahora</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Manda un resumen de todas las alertas activas (aceite, seguros, tarjetas) a WhatsApp de inmediato.
+          Manda un resumen de todas las alertas activas a Telegram de inmediato.
         </p>
         <button
           onClick={handleSendNow}
           disabled={status === 'sending'}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
         >
           <Send className="w-4 h-4" />
-          {status === 'sending' ? 'Enviando...' : 'Enviar alertas a WhatsApp'}
+          {status === 'sending' ? 'Enviando...' : 'Enviar alertas a Telegram'}
         </button>
       </div>
 
-      {/* Info de alertas automáticas */}
+      {/* Info alertas automáticas */}
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600">
-        <p className="font-medium text-gray-700 mb-1">Alertas automáticas</p>
-        <p>La app envía notificaciones automáticamente una vez al día cuando detecta:</p>
+        <p className="font-medium text-gray-700 mb-1">Alertas automáticas — cada día a las 8 AM</p>
         <ul className="mt-2 space-y-1 list-disc list-inside">
           <li>Cambio de aceite vencido o próximo (menos de 2,000 km)</li>
-          <li>Póliza de seguro vencida o que vence en menos de 30 días</li>
+          <li>Licencia de chofer vencida o próxima a vencer (30 días)</li>
+          <li>Póliza de seguro vencida o próxima a vencer (30 días)</li>
           <li>Pago de tarjeta de crédito en los próximos 5 días</li>
         </ul>
       </div>

@@ -5,11 +5,16 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-async function sendWhatsApp(phone, apikey, text) {
-  const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(text)}&apikey=${apikey}`;
+async function sendTelegram(token, chatId, text) {
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
   try {
-    const res = await fetch(url);
-    return res.ok;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+    });
+    const data = await res.json();
+    return data.ok === true;
   } catch {
     return false;
   }
@@ -20,7 +25,6 @@ function getAlerts(trucks, drivers, insurances, creditCards) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Aceite
   trucks.forEach((truck) => {
     const kmSince = (truck.kilometraje_actual || 0) - (truck.ultimo_cambio_aceite || 0);
     const interval = truck.intervalo_cambio_aceite || 10000;
@@ -32,7 +36,6 @@ function getAlerts(trucks, drivers, insurances, creditCards) {
     }
   });
 
-  // Licencias
   drivers.forEach((driver) => {
     if (!driver.licencia_vencimiento) return;
     const exp = new Date(driver.licencia_vencimiento + 'T12:00:00');
@@ -45,7 +48,6 @@ function getAlerts(trucks, drivers, insurances, creditCards) {
     }
   });
 
-  // Seguros
   insurances.forEach((ins) => {
     if (!ins.fecha_vencimiento || ins.estado !== 'activo') return;
     const exp = new Date(ins.fecha_vencimiento + 'T12:00:00');
@@ -57,18 +59,14 @@ function getAlerts(trucks, drivers, insurances, creditCards) {
     }
   });
 
-  // Tarjetas
   creditCards.forEach((card) => {
     if (!card.dia_pago) return;
     const currentDay = today.getDate();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-    let dueDate;
-    if (card.dia_pago >= currentDay) {
-      dueDate = new Date(currentYear, currentMonth, card.dia_pago);
-    } else {
-      dueDate = new Date(currentYear, currentMonth + 1, card.dia_pago);
-    }
+    const dueDate = card.dia_pago >= currentDay
+      ? new Date(currentYear, currentMonth, card.dia_pago)
+      : new Date(currentYear, currentMonth + 1, card.dia_pago);
     const days = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
     const last4 = String(card.numero_tarjeta).slice(-4);
     if (days === 0) {
@@ -83,20 +81,18 @@ function getAlerts(trucks, drivers, insurances, creditCards) {
 
 export default async function handler(req, res) {
   try {
-    // Leer configuración de WhatsApp desde Supabase
     const { data: settings } = await supabase
       .from('settings')
       .select('*')
-      .eq('key', 'wa_config')
+      .eq('key', 'tg_config')
       .single();
 
-    if (!settings?.value?.phone || !settings?.value?.apikey) {
-      return res.status(200).json({ message: 'WhatsApp no configurado, saltando notificaciones.' });
+    if (!settings?.value?.token || !settings?.value?.chatId) {
+      return res.status(200).json({ message: 'Telegram no configurado.' });
     }
 
-    const { phone, apikey } = settings.value;
+    const { token, chatId } = settings.value;
 
-    // Cargar datos
     const [t, d, i, cc] = await Promise.all([
       supabase.from('trucks').select('*'),
       supabase.from('drivers').select('*'),
@@ -111,13 +107,13 @@ export default async function handler(req, res) {
     }
 
     const today = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const message = [`🚨 *Chaires Trucking — Alertas ${today}*`, '', ...alerts].join('\n\n');
+    const message = [`🚨 *Chaires Trucking — Alertas*\n_${today}_`, '', ...alerts].join('\n\n');
 
-    const ok = await sendWhatsApp(phone, apikey, message);
+    const ok = await sendTelegram(token, chatId, message);
 
     return res.status(200).json({
-      message: ok ? `Notificación enviada con ${alerts.length} alerta(s).` : 'Error al enviar WhatsApp.',
-      alerts: alerts.length
+      message: ok ? `Notificación enviada con ${alerts.length} alerta(s).` : 'Error al enviar Telegram.',
+      alerts: alerts.length,
     });
 
   } catch (err) {
