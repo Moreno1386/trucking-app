@@ -11,10 +11,34 @@ export default function Settings() {
   const [config, setConfig] = useState({ token: '', chatId: '' });
   const [status, setStatus] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [chats, setChats] = useState([]);
 
   useEffect(() => {
     setConfig(getTGConfig());
   }, []);
+
+  const detectChats = async () => {
+    if (!config.token) { alert('Ingresa el Token primero.'); return; }
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${config.token.trim()}/getUpdates`);
+      const data = await res.json();
+      if (!data.ok) { alert('Token inválido.'); return; }
+      const found = [];
+      data.result.forEach((u) => {
+        const chat = u.message?.chat || u.my_chat_member?.chat;
+        if (chat && !found.find((c) => c.id === chat.id)) {
+          found.push({ id: chat.id, name: chat.title || chat.first_name || String(chat.id), type: chat.type });
+        }
+      });
+      if (found.length === 0) {
+        alert('No se detectaron chats. Asegúrate de haber mandado un mensaje en el grupo después de agregar el bot.');
+        return;
+      }
+      setChats(found);
+    } catch {
+      alert('Error al conectar con Telegram.');
+    }
+  };
 
   const handleSave = async () => {
     const cfg = { token: config.token.trim(), chatId: config.chatId.trim() };
@@ -105,15 +129,40 @@ export default function Settings() {
 
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-1">
-            Chat ID (de @userinfobot)
+            Chat ID
           </label>
-          <input
-            type="text"
-            placeholder="123456789"
-            value={config.chatId}
-            onChange={(e) => setConfig((c) => ({ ...c, chatId: e.target.value }))}
-            className={inp}
-          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="123456789"
+              value={config.chatId}
+              onChange={(e) => setConfig((c) => ({ ...c, chatId: e.target.value }))}
+              className={inp}
+            />
+            <button
+              type="button"
+              onClick={detectChats}
+              className="whitespace-nowrap border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg px-3 py-2 text-xs font-medium transition-colors"
+            >
+              Detectar
+            </button>
+          </div>
+          {chats.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-gray-500">Selecciona el chat al que quieres enviar alertas:</p>
+              {chats.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => { setConfig((cfg) => ({ ...cfg, chatId: String(c.id) })); setChats([]); }}
+                  className="w-full text-left text-xs bg-gray-50 hover:bg-red-50 border border-gray-200 hover:border-red-300 rounded-lg px-3 py-2 transition-colors"
+                >
+                  <span className="font-medium">{c.name}</span>
+                  <span className="text-gray-400 ml-2">({c.type}) — ID: {c.id}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 pt-2">
@@ -163,7 +212,7 @@ export default function Settings() {
 
       {/* Info alertas automáticas */}
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600">
-        <p className="font-medium text-gray-700 mb-1">Alertas automáticas — cada día a las 8 AM</p>
+        <p className="font-medium text-gray-700 mb-1">Alertas automáticas — cada día a las 9 AM y 2 PM</p>
         <ul className="mt-2 space-y-1 list-disc list-inside">
           <li>Cambio de aceite vencido o próximo (menos de 2,000 km)</li>
           <li>Licencia de chofer vencida o próxima a vencer (30 días)</li>
