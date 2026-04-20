@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Phone, Key, Send, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { getWAConfig, saveWAConfig, sendWhatsApp } from '../utils/whatsapp';
+import { supabase } from '../lib/supabase';
 import useFleetStore from '../store/useFleetStore';
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent';
@@ -15,8 +16,11 @@ export default function Settings() {
     setConfig(getWAConfig());
   }, []);
 
-  const handleSave = () => {
-    saveWAConfig({ phone: config.phone.trim(), apikey: config.apikey.trim() });
+  const handleSave = async () => {
+    const cfg = { phone: config.phone.trim(), apikey: config.apikey.trim() };
+    saveWAConfig(cfg);
+    // Guardar también en Supabase para notificaciones automáticas
+    await supabase.from('settings').upsert({ key: 'wa_config', value: cfg });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
