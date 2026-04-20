@@ -327,7 +327,7 @@ export default function Fleet() {
                   ['numero_unidad', 'Número de Unidad *', 'text', true],
                   ['marca', 'Marca *', 'text', true],
                   ['modelo', 'Modelo *', 'text', true],
-                  ['año', 'Año *', 'number', true],
+                  ['anio', 'Año *', 'number', true],
                   ['placa', 'Placa', 'text', false],
                   ['vin', 'VIN', 'text', false],
                   ['capacidad_carga', 'Capacidad de Carga (kg)', 'number', false],
