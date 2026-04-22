@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { FileText, TrendingDown, Plus, Edit, Trash2, X, DollarSign } from 'lucide-react';
+import { FileText, TrendingDown, Plus, Edit, Trash2, X, Eye } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
-import { newId } from '../utils/helpers';
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent';
 
@@ -30,6 +29,7 @@ function parseMonto(val) {
 function Facturas() {
   const { facturas, addFactura, updateFactura, deleteFactura } = useFleetStore();
   const [showModal, setShowModal] = useState(false);
+  const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState(emptyFactura);
 
@@ -103,11 +103,44 @@ function Facturas() {
               </div>
               <div className="flex items-center gap-3 ml-4">
                 <span className="font-bold text-gray-900 text-sm whitespace-nowrap">{formatCurrency(f.monto)}</span>
+                <button onClick={() => setShowDetail(f)} className="text-gray-400 hover:text-gray-600"><Eye className="w-4 h-4" /></button>
                 <button onClick={() => openEdit(f)} className="text-blue-500 hover:text-blue-700"><Edit className="w-4 h-4" /></button>
                 <button onClick={() => handleDelete(f)} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal Ver */}
+      {showDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h3 className="font-bold text-gray-900">Factura {showDetail.numero_factura}</h3>
+              <button onClick={() => setShowDetail(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 grid grid-cols-2 gap-4 text-sm">
+              {[
+                ['Número Factura', showDetail.numero_factura],
+                ['Cliente', showDetail.cliente || '—'],
+                ['Fecha', formatDate(showDetail.fecha)],
+                ['Monto', formatCurrency(showDetail.monto)],
+                ['Estado', showDetail.estado === 'pagada' ? 'Pagada' : 'Pendiente'],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="text-xs text-gray-400">{k}</div>
+                  <div className="font-medium text-gray-900">{v}</div>
+                </div>
+              ))}
+              {showDetail.notas && (
+                <div className="col-span-2">
+                  <div className="text-xs text-gray-400">Notas</div>
+                  <div className="text-gray-700">{showDetail.notas}</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -165,6 +198,7 @@ function Facturas() {
 function Gastos() {
   const { gastos, addGasto, updateGasto, deleteGasto } = useFleetStore();
   const [showModal, setShowModal] = useState(false);
+  const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState(emptyGasto);
 
@@ -223,11 +257,42 @@ function Gastos() {
               </div>
               <div className="flex items-center gap-3 ml-4">
                 <span className="font-bold text-red-600 text-sm whitespace-nowrap">{formatCurrency(g.cantidad)}</span>
+                <button onClick={() => setShowDetail(g)} className="text-gray-400 hover:text-gray-600"><Eye className="w-4 h-4" /></button>
                 <button onClick={() => openEdit(g)} className="text-blue-500 hover:text-blue-700"><Edit className="w-4 h-4" /></button>
                 <button onClick={() => handleDelete(g)} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal Ver */}
+      {showDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h3 className="font-bold text-gray-900">Detalle de Gasto</h3>
+              <button onClick={() => setShowDetail(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 grid grid-cols-2 gap-4 text-sm">
+              {[
+                ['Concepto', showDetail.concepto],
+                ['Cantidad', formatCurrency(showDetail.cantidad)],
+                ['Fecha', formatDate(showDetail.fecha)],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="text-xs text-gray-400">{k}</div>
+                  <div className="font-medium text-gray-900">{v}</div>
+                </div>
+              ))}
+              {showDetail.notas && (
+                <div className="col-span-2">
+                  <div className="text-xs text-gray-400">Notas</div>
+                  <div className="text-gray-700">{showDetail.notas}</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
