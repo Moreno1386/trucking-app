@@ -122,7 +122,8 @@ const useFleetStore = create((set, get) => ({
     return true;
   },
   updateTruck: async (id, data) => {
-    const updated = { ...data, updated_at: now() };
+    const { id: _id, created_at, ...updateData } = data;
+    const updated = { ...updateData, updated_at: now() };
     const { error } = await supabase.from('trucks').update(updated).eq('id', id);
     if (error) { alert('Error al actualizar camión: ' + error.message); return; }
     set((s) => ({ trucks: s.trucks.map((t) => (t.id === id ? { ...t, ...updated } : t)) }));
@@ -145,9 +146,10 @@ const useFleetStore = create((set, get) => ({
     return true;
   },
   updateDriver: async (id, data) => {
-    const { error } = await supabase.from('drivers').update(data).eq('id', id);
-    if (error) { alert('Error al actualizar: ' + error.message); return; }
-    set((s) => ({ drivers: s.drivers.map((d) => (d.id === id ? { ...d, ...data } : d)) }));
+    const { id: _id, created_at, ...updateData } = data;
+    const { error } = await supabase.from('drivers').update(updateData).eq('id', id);
+    if (error) { alert('Error al actualizar chofer: ' + error.message); return; }
+    set((s) => ({ drivers: s.drivers.map((d) => (d.id === id ? { ...d, ...updateData } : d)) }));
   },
   deleteDriver: async (id) => {
     const { error } = await supabase.from('drivers').delete().eq('id', id);
@@ -164,9 +166,10 @@ const useFleetStore = create((set, get) => ({
     return true;
   },
   updateTrip: async (id, data) => {
-    const { error } = await supabase.from('trips').update(data).eq('id', id);
+    const { id: _id, created_at, ...updateData } = data;
+    const { error } = await supabase.from('trips').update(updateData).eq('id', id);
     if (error) { alert('Error al actualizar viaje: ' + error.message); return; }
-    set((s) => ({ trips: s.trips.map((t) => (t.id === id ? { ...t, ...data } : t)) }));
+    set((s) => ({ trips: s.trips.map((t) => (t.id === id ? { ...t, ...updateData } : t)) }));
   },
   deleteTrip: async (id) => {
     const { error } = await supabase.from('trips').delete().eq('id', id);
@@ -183,9 +186,10 @@ const useFleetStore = create((set, get) => ({
     return true;
   },
   updateMaintenance: async (id, data) => {
-    const { error } = await supabase.from('maintenance').update(data).eq('id', id);
+    const { id: _id, created_at, ...updateData } = data;
+    const { error } = await supabase.from('maintenance').update(updateData).eq('id', id);
     if (error) { alert('Error al actualizar mantenimiento: ' + error.message); return; }
-    set((s) => ({ maintenance: s.maintenance.map((m) => (m.id === id ? { ...m, ...data } : m)) }));
+    set((s) => ({ maintenance: s.maintenance.map((m) => (m.id === id ? { ...m, ...updateData } : m)) }));
   },
   deleteMaintenance: async (id) => {
     const { error } = await supabase.from('maintenance').delete().eq('id', id);
@@ -202,9 +206,10 @@ const useFleetStore = create((set, get) => ({
     return true;
   },
   updateInsurance: async (id, data) => {
-    const { error } = await supabase.from('insurances').update(data).eq('id', id);
+    const { id: _id, created_at, ...updateData } = data;
+    const { error } = await supabase.from('insurances').update(updateData).eq('id', id);
     if (error) { alert('Error al actualizar seguro: ' + error.message); return; }
-    set((s) => ({ insurances: s.insurances.map((i) => (i.id === id ? { ...i, ...data } : i)) }));
+    set((s) => ({ insurances: s.insurances.map((i) => (i.id === id ? { ...i, ...updateData } : i)) }));
   },
   deleteInsurance: async (id) => {
     const { error } = await supabase.from('insurances').delete().eq('id', id);
@@ -221,9 +226,10 @@ const useFleetStore = create((set, get) => ({
     return true;
   },
   updateCreditCard: async (id, data) => {
-    const { error } = await supabase.from('credit_cards').update(data).eq('id', id);
+    const { id: _id, created_at, ...updateData } = data;
+    const { error } = await supabase.from('credit_cards').update(updateData).eq('id', id);
     if (error) { alert('Error al actualizar tarjeta: ' + error.message); return; }
-    set((s) => ({ creditCards: s.creditCards.map((c) => (c.id === id ? { ...c, ...data } : c)) }));
+    set((s) => ({ creditCards: s.creditCards.map((c) => (c.id === id ? { ...c, ...updateData } : c)) }));
   },
   deleteCreditCard: async (id) => {
     const { error } = await supabase.from('credit_cards').delete().eq('id', id);

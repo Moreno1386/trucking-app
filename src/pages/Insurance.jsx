@@ -7,6 +7,7 @@ const emptyForm = {
   aseguradora: '',
   numero_poliza: '',
   camion_id: '',
+  vehiculo_descripcion: '',
   tipo_cobertura: 'Amplia',
   fecha_inicio: '',
   fecha_vencimiento: '',
@@ -40,8 +41,8 @@ export default function Insurance() {
     e.preventDefault();
     const data = {
       ...form,
-      prima_anual: parseFloat(form.prima_anual) || 0,
-      suma_asegurada: parseFloat(form.suma_asegurada) || 0,
+      prima_anual: parseFloat(String(form.prima_anual).replace(/,/g, '')) || 0,
+      suma_asegurada: parseFloat(String(form.suma_asegurada).replace(/,/g, '')) || 0,
     };
     if (editItem) updateInsurance(editItem.id, data);
     else addInsurance(data);
@@ -97,7 +98,9 @@ export default function Insurance() {
                 <div className="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-sm">
                   <span className="text-gray-500 text-xs">Unidad: </span>
                   <span className="font-medium text-gray-800">
-                    {truck ? `Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo} ${truck.anio}` : 'No asignada'}
+                    {truck
+                      ? `Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo} ${truck.anio}`
+                      : ins.vehiculo_descripcion || 'No asignada'}
                   </span>
                 </div>
 
@@ -157,7 +160,9 @@ export default function Insurance() {
                 ['No. Póliza', showDetail.ins.numero_poliza],
                 ['Cobertura', showDetail.ins.tipo_cobertura || '—'],
                 ['Estado', showDetail.ins.estado],
-                ['Unidad', showDetail.truck ? `Unidad ${showDetail.truck.numero_unidad} — ${showDetail.truck.marca} ${showDetail.truck.modelo}` : '—'],
+                ['Unidad', showDetail.truck
+                  ? `Unidad ${showDetail.truck.numero_unidad} — ${showDetail.truck.marca} ${showDetail.truck.modelo}`
+                  : showDetail.ins.vehiculo_descripcion || '—'],
                 ['Placa', showDetail.truck?.placa || '—'],
                 ['Fecha Inicio', formatDate(showDetail.ins.fecha_inicio)],
                 ['Fecha Vencimiento', formatDate(showDetail.ins.fecha_vencimiento)],
@@ -196,8 +201,8 @@ export default function Insurance() {
                   ['tipo_cobertura', 'Tipo de Cobertura', 'text', false],
                   ['fecha_inicio', 'Fecha Inicio', 'date', false],
                   ['fecha_vencimiento', 'Fecha Vencimiento', 'date', false],
-                  ['prima_anual', 'Prima Anual (MXN)', 'number', false],
-                  ['suma_asegurada', 'Suma Asegurada (MXN)', 'number', false],
+                  ['prima_anual', 'Prima Anual (MXN)', 'text', false],
+                  ['suma_asegurada', 'Suma Asegurada (MXN)', 'text', false],
                 ].map(([name, label, type, required]) => (
                   <div key={name}>
                     <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
@@ -205,11 +210,15 @@ export default function Insurance() {
                   </div>
                 ))}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Camión</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Camión (de la flota)</label>
                   <select name="camion_id" value={form.camion_id} onChange={handleChange} className={inp}>
                     <option value="">— Seleccionar —</option>
                     {trucks.map((t) => <option key={t.id} value={t.id}>Unidad {t.numero_unidad} — {t.marca} {t.modelo}</option>)}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">O especificar vehículo</label>
+                  <input name="vehiculo_descripcion" type="text" value={form.vehiculo_descripcion || ''} onChange={handleChange} placeholder="Ej. Camioneta Ford F-150, Trailer extra..." className={inp} />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Estado</label>
