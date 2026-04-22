@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Truck, Users, ClipboardList, Route,
   Wrench, FileText, CreditCard, Phone, Settings, LogOut,
-  Menu, X, Bell,
+  Menu, X, Bell, Briefcase,
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
@@ -11,7 +11,8 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/fleet', icon: Truck, label: 'Gestión de Flota' },
   { to: '/drivers', icon: Users, label: 'Gestión de Choferes' },
-  { to: '/dispatch', icon: ClipboardList, label: 'Administrativo' },
+  { to: '/dispatch', icon: ClipboardList, label: 'Despacho' },
+  { to: '/admin', icon: Briefcase, label: 'Administrativo' },
   { to: '/trips', icon: Route, label: 'Viajes' },
   { to: '/maintenance', icon: Wrench, label: 'Mantenimiento' },
   { to: '/insurance', icon: FileText, label: 'Seguros' },

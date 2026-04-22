@@ -13,6 +13,7 @@ import Maintenance from './pages/Maintenance';
 import Insurance from './pages/Insurance';
 import CreditCards from './pages/CreditCards';
 import Settings from './pages/Settings';
+import Admin from './pages/Admin';
 import { getTGConfig, sendTelegram, getLastSentDate, setLastSentDate, todayStr } from './utils/telegram';
 
 function Protected({ children }) {
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="maintenance" element={<Maintenance />} />
             <Route path="insurance" element={<Insurance />} />
             <Route path="credit-cards" element={<CreditCards />} />
+            <Route path="admin" element={<Admin />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

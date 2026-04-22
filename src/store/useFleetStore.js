@@ -18,6 +18,8 @@ const useFleetStore = create((set, get) => ({
   insurances: [],
   creditCards: [],
   turns: [],
+  facturas: [],
+  gastos: [],
   isLoading: false,
 
   // ── Cargar todos los datos desde Supabase ────────────────────
@@ -32,7 +34,7 @@ const useFleetStore = create((set, get) => ({
       return;
     }
 
-    const [t, d, tr, m, i, cc, tu] = await Promise.all([
+    const [t, d, tr, m, i, cc, tu, fa, ga] = await Promise.all([
       supabase.from('trucks').select('*').order('created_at'),
       supabase.from('drivers').select('*').order('created_at'),
       supabase.from('trips').select('*').order('created_at'),
@@ -40,6 +42,8 @@ const useFleetStore = create((set, get) => ({
       supabase.from('insurances').select('*').order('created_at'),
       supabase.from('credit_cards').select('*').order('created_at'),
       supabase.from('turns').select('*').order('timestamp'),
+      supabase.from('facturas').select('*').order('created_at'),
+      supabase.from('gastos').select('*').order('created_at'),
     ]);
 
     const trucks = t.data || [];
@@ -69,6 +73,8 @@ const useFleetStore = create((set, get) => ({
         insurances: i2.data || [],
         creditCards: cc2.data || [],
         turns: tu.data || [],
+        facturas: fa.data || [],
+        gastos: ga.data || [],
         isLoading: false,
       });
     } else {
@@ -80,6 +86,8 @@ const useFleetStore = create((set, get) => ({
         insurances: i.data || [],
         creditCards: cc.data || [],
         turns: tu.data || [],
+        facturas: fa.data || [],
+        gastos: ga.data || [],
         isLoading: false,
       });
     }
@@ -108,6 +116,10 @@ const useFleetStore = create((set, get) => ({
         () => refresh('credit_cards', 'creditCards'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'turns' },
         () => refresh('turns', 'turns', 'timestamp'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'facturas' },
+        () => refresh('facturas', 'facturas'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gastos' },
+        () => refresh('gastos', 'gastos'))
       .subscribe();
 
     return () => supabase.removeChannel(channel);
@@ -268,6 +280,46 @@ const useFleetStore = create((set, get) => ({
       set((s) => ({ turns: s.turns.filter((t) => t.id !== turn.id) }));
       await supabase.from('turns').delete().eq('id', turn.id);
     }
+  },
+
+  // ── Facturas ─────────────────────────────────────────────────
+  addFactura: async (data) => {
+    const factura = { ...data, id: newId(), created_at: now() };
+    const { error } = await supabase.from('facturas').insert(factura);
+    if (error) { alert('Error al guardar factura: ' + error.message); return false; }
+    set((s) => ({ facturas: [...s.facturas, factura] }));
+    return true;
+  },
+  updateFactura: async (id, data) => {
+    const { id: _id, created_at, ...updateData } = data;
+    const { error } = await supabase.from('facturas').update(updateData).eq('id', id);
+    if (error) { alert('Error al actualizar factura: ' + error.message); return; }
+    set((s) => ({ facturas: s.facturas.map((f) => (f.id === id ? { ...f, ...updateData } : f)) }));
+  },
+  deleteFactura: async (id) => {
+    const { error } = await supabase.from('facturas').delete().eq('id', id);
+    if (error) { alert('Error al eliminar factura: ' + error.message); return; }
+    set((s) => ({ facturas: s.facturas.filter((f) => f.id !== id) }));
+  },
+
+  // ── Gastos ───────────────────────────────────────────────────
+  addGasto: async (data) => {
+    const gasto = { ...data, id: newId(), created_at: now() };
+    const { error } = await supabase.from('gastos').insert(gasto);
+    if (error) { alert('Error al guardar gasto: ' + error.message); return false; }
+    set((s) => ({ gastos: [...s.gastos, gasto] }));
+    return true;
+  },
+  updateGasto: async (id, data) => {
+    const { id: _id, created_at, ...updateData } = data;
+    const { error } = await supabase.from('gastos').update(updateData).eq('id', id);
+    if (error) { alert('Error al actualizar gasto: ' + error.message); return; }
+    set((s) => ({ gastos: s.gastos.map((g) => (g.id === id ? { ...g, ...updateData } : g)) }));
+  },
+  deleteGasto: async (id) => {
+    const { error } = await supabase.from('gastos').delete().eq('id', id);
+    if (error) { alert('Error al eliminar gasto: ' + error.message); return; }
+    set((s) => ({ gastos: s.gastos.filter((g) => g.id !== id) }));
   },
 
   // ── Computed ─────────────────────────────────────────────────
