@@ -11,7 +11,6 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/fleet', icon: Truck, label: 'Gestión de Flota' },
   { to: '/drivers', icon: Users, label: 'Gestión de Choferes' },
-  { to: '/dispatch', icon: ClipboardList, label: 'Despacho' },
   { to: '/admin', icon: Briefcase, label: 'Administrativo' },
   { to: '/trips', icon: Route, label: 'Viajes' },
   { to: '/maintenance', icon: Wrench, label: 'Mantenimiento' },
