@@ -109,8 +109,11 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
     }).sort((a, b) => b.rentabilidad - a.rentabilidad);
   }, [trucks, facturas, gastos, maintenance, trips]);
 
-  const hasData = data.some((d) => d.ingresos > 0 || d.gastos > 0 || d.combustible > 0);
-  const display = hasData ? data : DEMO_UNIT_DATA.map((d) => ({ ...d, truck: null }));
+  const hasTrucks = trucks.length > 0;
+  const hasFinancial = data.some((d) => d.ingresos > 0 || d.gastos > 0 || d.combustible > 0);
+  // Si hay camiones reales, siempre los mostramos (aunque tengan $0).
+  // Solo mostramos ficticios cuando la BD está completamente vacía de camiones.
+  const display = hasTrucks ? data : DEMO_UNIT_DATA.map((d) => ({ ...d, truck: null }));
 
   return (
     <div className="space-y-6" id="section-units">
@@ -125,10 +128,16 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
         </button>
       </div>
 
-      {!hasData && (
+      {!hasTrucks && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700 flex items-start gap-2">
           <span className="text-lg leading-none">📊</span>
-          <span>Mostrando datos de ejemplo. Registra viajes y facturas vinculadas a camiones para ver tus reportes reales.</span>
+          <span>Mostrando datos de ejemplo. Agrega tu primera unidad con el botón "Nueva Unidad" para empezar.</span>
+        </div>
+      )}
+      {hasTrucks && !hasFinancial && (
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-700 flex items-start gap-2">
+          <span className="text-lg leading-none">💡</span>
+          <span>Tus unidades están registradas. Registra viajes y facturas vinculadas a cada camión para ver sus ingresos y rentabilidad.</span>
         </div>
       )}
 
