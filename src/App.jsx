@@ -14,7 +14,6 @@ import Insurance from './pages/Insurance';
 import CreditCards from './pages/CreditCards';
 import Settings from './pages/Settings';
 import Admin from './pages/Admin';
-import { getTGConfig, sendTelegram, getLastSentDate, setLastSentDate, todayStr } from './utils/telegram';
 
 function Protected({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -24,31 +23,11 @@ function Protected({ children }) {
 function AppLoader({ children }) {
   const fetchAll = useFleetStore((s) => s.fetchAll);
   const subscribeToRealtime = useFleetStore((s) => s.subscribeToRealtime);
-  const getAlerts = useFleetStore((s) => s.getAlerts);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    fetchAll().then(() => {
-      // Notificaciones automáticas: una vez por día
-      const today = todayStr();
-      if (getLastSentDate() === today) return;
-      const { token, chatId } = getTGConfig();
-      if (!token || !chatId) return;
-      const alerts = getAlerts();
-      if (alerts.length === 0) return;
-      const lines = ['🚨 *Chaires Trucking — Alertas del día*', ''];
-      alerts.forEach((a) => {
-        const icon = a.severity === 'high' ? '🔴' : '🟡';
-        lines.push(`${icon} *${a.titulo}*`);
-        lines.push(`   ${a.mensaje}`);
-        lines.push(`   ${a.detalle}`);
-        lines.push('');
-      });
-      sendTelegram(token, chatId, lines.join('\n')).then((ok) => {
-        if (ok) setLastSentDate(today);
-      });
-    });
+    fetchAll();
     const unsubscribe = subscribeToRealtime();
     return unsubscribe;
   }, [isAuthenticated]);
