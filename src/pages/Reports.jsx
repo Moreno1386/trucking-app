@@ -3,7 +3,8 @@ import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { Download, FileSpreadsheet, BarChart2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Filter } from 'lucide-react';
+import { Download, FileSpreadsheet, BarChart2, TrendingUp, TrendingDown, ChevronDown, ChevronUp, Filter, Plus, Edit, Trash2, X, Eye } from 'lucide-react';
+import { formatNumber, statusClass, statusLabel } from '../utils/helpers';
 import useFleetStore from '../store/useFleetStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
@@ -53,46 +54,77 @@ const buildDemoMonthly = (year) =>
     balance: 0,
   })).map((d) => ({ ...d, balance: d.facturacion - d.combustible - d.mantenimiento - d.otros }));
 
+// ── Formulario vacío de camión ────────────────────────────────────
+const emptyTruckForm = {
+  numero_unidad: '', marca: '', modelo: '',
+  anio: new Date().getFullYear(), placa: '', vin: '',
+  capacidad_carga: '', kilometraje_actual: '',
+  estado: 'disponible', ultimo_cambio_aceite: '',
+  intervalo_cambio_aceite: 10000, fecha_ultimo_mantenimiento: '', notas: '',
+};
+
+const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent';
+
 // ── SECCIÓN 1: Ingresos vs Gastos por Unidad ─────────────────────
 function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
+  const { addTruck, updateTruck, deleteTruck } = useFleetStore();
+  const [showModal, setShowModal] = useState(false);
+  const [showDetail, setShowDetail] = useState(null);
+  const [editItem, setEditItem] = useState(null);
+  const [form, setForm] = useState(emptyTruckForm);
+
+  const openAdd = () => { setEditItem(null); setForm(emptyTruckForm); setShowModal(true); };
+  const openEdit = (truck) => { setEditItem(truck); setForm({ ...truck }); setShowModal(true); };
+  const handleDelete = (truck) => {
+    if (window.confirm(`¿Eliminar Unidad ${truck.numero_unidad}? Esta acción no se puede deshacer.`)) deleteTruck(truck.id);
+  };
+  const handleChange = (e) => { const { name, value } = e.target; setForm((p) => ({ ...p, [name]: value })); };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const data = {
+      ...form,
+      anio: parseInt(form.anio) || new Date().getFullYear(),
+      capacidad_carga: parseFloat(form.capacidad_carga) || 0,
+      kilometraje_actual: parseFloat(form.kilometraje_actual) || 0,
+      ultimo_cambio_aceite: parseFloat(form.ultimo_cambio_aceite) || 0,
+      intervalo_cambio_aceite: parseFloat(form.intervalo_cambio_aceite) || 10000,
+      fecha_ultimo_mantenimiento: form.fecha_ultimo_mantenimiento || null,
+    };
+    if (editItem) updateTruck(editItem.id, data);
+    else addTruck(data);
+    setShowModal(false); setEditItem(null);
+  };
+
   const data = useMemo(() => {
     return trucks.map((truck) => {
       const ingresos =
         facturas.filter((f) => f.camion_id === truck.id).reduce((s, f) => s + parseMoney(f.monto), 0) +
         trips.filter((t) => t.camion_id === truck.id && (t.estado === 'completado' || t.estado === 'en_curso'))
           .reduce((s, t) => s + parseMoney(t.costo_flete ?? t.costo), 0);
-
-      const gastosAdmin = gastos
-        .filter((g) => g.camion_id === truck.id)
-        .reduce((s, g) => s + parseMoney(g.monto ?? g.cantidad), 0);
-
-      const gastosMantenimiento = maintenance
-        .filter((m) => m.camion_id === truck.id)
-        .reduce((s, m) => s + parseMoney(m.costo), 0);
-
-      const combustible = trips
-        .filter((t) => t.camion_id === truck.id)
-        .reduce((s, t) => s + parseMoney(t.combustible_costo), 0);
-
+      const gastosAdmin = gastos.filter((g) => g.camion_id === truck.id).reduce((s, g) => s + parseMoney(g.monto ?? g.cantidad), 0);
+      const gastosMantenimiento = maintenance.filter((m) => m.camion_id === truck.id).reduce((s, m) => s + parseMoney(m.costo), 0);
+      const combustible = trips.filter((t) => t.camion_id === truck.id).reduce((s, t) => s + parseMoney(t.combustible_costo), 0);
       const totalGastos = gastosAdmin + gastosMantenimiento;
-      const rentabilidad = ingresos - totalGastos - combustible;
-
-      return {
-        unidad: truck.numero_unidad,
-        nombre: `${truck.marca} ${truck.modelo}`,
-        ingresos,
-        gastos: totalGastos,
-        combustible,
-        rentabilidad,
-      };
+      return { truck, unidad: truck.numero_unidad, nombre: `${truck.marca} ${truck.modelo}`, ingresos, gastos: totalGastos, combustible, rentabilidad: ingresos - totalGastos - combustible };
     }).sort((a, b) => b.rentabilidad - a.rentabilidad);
   }, [trucks, facturas, gastos, maintenance, trips]);
 
   const hasData = data.some((d) => d.ingresos > 0 || d.gastos > 0 || d.combustible > 0);
-  const display = hasData ? data : DEMO_UNIT_DATA;
+  const display = hasData ? data : DEMO_UNIT_DATA.map((d) => ({ ...d, truck: null }));
 
   return (
     <div className="space-y-6" id="section-units">
+      {/* Header con botón Agregar */}
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="text-sm text-gray-500">{trucks.length} unidad{trucks.length !== 1 ? 'es' : ''} registrada{trucks.length !== 1 ? 's' : ''}</span>
+        </div>
+        <button onClick={openAdd}
+          className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+          <Plus className="w-4 h-4" /> Nueva Unidad
+        </button>
+      </div>
+
       {!hasData && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700 flex items-start gap-2">
           <span className="text-lg leading-none">📊</span>
@@ -110,6 +142,7 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Gastos</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Combustible</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Rentabilidad neta</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 bg-white">
@@ -118,6 +151,11 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
                 <td className="px-4 py-3">
                   <div className="font-semibold text-gray-900">{row.unidad}</div>
                   <div className="text-xs text-gray-400">{row.nombre}</div>
+                  {row.truck && (
+                    <span className={`mt-0.5 inline-block text-xs px-1.5 py-0.5 rounded-full ${statusClass(row.truck.estado)}`}>
+                      {statusLabel[row.truck.estado]}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right font-medium text-green-600">{formatCurrency(row.ingresos)}</td>
                 <td className="px-4 py-3 text-right text-red-600">{formatCurrency(row.gastos)}</td>
@@ -127,6 +165,26 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
                     {row.rentabilidad >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     {formatCurrency(row.rentabilidad)}
                   </span>
+                </td>
+                <td className="px-4 py-3">
+                  {row.truck ? (
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button onClick={() => setShowDetail(row.truck)} title="Ver detalle"
+                        className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => openEdit(row.truck)} title="Editar"
+                        className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(row.truck)} title="Eliminar"
+                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-300 text-center block">—</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -138,6 +196,7 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
               <td className="px-4 py-3 text-right font-bold text-red-700">{formatCurrency(display.reduce((s, r) => s + r.gastos, 0))}</td>
               <td className="px-4 py-3 text-right font-bold text-orange-600">{formatCurrency(display.reduce((s, r) => s + r.combustible, 0))}</td>
               <td className="px-4 py-3 text-right font-bold text-gray-900">{formatCurrency(display.reduce((s, r) => s + r.rentabilidad, 0))}</td>
+              <td />
             </tr>
           </tfoot>
         </table>
@@ -161,6 +220,110 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Modal Ver detalle */}
+      {showDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h3 className="font-bold text-gray-900 text-lg">Unidad {showDetail.numero_unidad}</h3>
+              <button onClick={() => setShowDetail(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 grid grid-cols-2 gap-4 text-sm">
+              {[
+                ['Marca', showDetail.marca],
+                ['Modelo', showDetail.modelo],
+                ['Año', showDetail.anio],
+                ['Placa', showDetail.placa || '—'],
+                ['VIN', showDetail.vin || '—'],
+                ['Capacidad', `${formatNumber(showDetail.capacidad_carga)} kg`],
+                ['Kilometraje', `${formatNumber(showDetail.kilometraje_actual)} km`],
+                ['Estado', statusLabel[showDetail.estado] ?? showDetail.estado],
+                ['Último aceite (km)', formatNumber(showDetail.ultimo_cambio_aceite)],
+                ['Intervalo aceite (km)', formatNumber(showDetail.intervalo_cambio_aceite)],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="text-xs text-gray-400">{k}</div>
+                  <div className="font-medium text-gray-900">{v}</div>
+                </div>
+              ))}
+              {showDetail.notas && (
+                <div className="col-span-2">
+                  <div className="text-xs text-gray-400">Notas</div>
+                  <div className="text-gray-700">{showDetail.notas}</div>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 px-5 pb-5">
+              <button onClick={() => { setShowDetail(null); openEdit(showDetail); }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-medium">
+                <Edit className="w-4 h-4" /> Editar
+              </button>
+              <button onClick={() => setShowDetail(null)}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Agregar / Editar */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="sticky top-0 flex items-center justify-between p-5 border-b bg-white z-10">
+              <h3 className="font-bold text-gray-900 text-lg">{editItem ? 'Editar Unidad' : 'Nueva Unidad'}</h3>
+              <button onClick={() => { setShowModal(false); setEditItem(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  ['numero_unidad', 'Número de Unidad *', 'text', true],
+                  ['marca', 'Marca *', 'text', true],
+                  ['modelo', 'Modelo *', 'text', true],
+                  ['anio', 'Año *', 'number', true],
+                  ['placa', 'Placa', 'text', false],
+                  ['vin', 'VIN', 'text', false],
+                  ['capacidad_carga', 'Capacidad de Carga (kg)', 'number', false],
+                  ['kilometraje_actual', 'Kilometraje Actual *', 'number', true],
+                  ['ultimo_cambio_aceite', 'Último Cambio de Aceite (km)', 'number', false],
+                  ['intervalo_cambio_aceite', 'Intervalo Cambio Aceite (km)', 'number', false],
+                  ['fecha_ultimo_mantenimiento', 'Último Mantenimiento', 'date', false],
+                ].map(([name, label, type, required]) => (
+                  <div key={name}>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+                    <input name={name} type={type} value={form[name] ?? ''} onChange={handleChange}
+                      required={required} className={inp} min={type === 'number' ? 0 : undefined} />
+                  </div>
+                ))}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Estado</label>
+                  <select name="estado" value={form.estado} onChange={handleChange} className={inp}>
+                    <option value="disponible">Disponible</option>
+                    <option value="en_viaje">En Viaje</option>
+                    <option value="mantenimiento">Mantenimiento</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Notas</label>
+                  <textarea name="notas" value={form.notas ?? ''} onChange={handleChange} rows={2} className={inp} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <button type="button" onClick={() => { setShowModal(false); setEditItem(null); }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium">
+                  Cancelar
+                </button>
+                <button type="submit"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">
+                  {editItem ? 'Actualizar' : 'Guardar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
