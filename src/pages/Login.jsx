@@ -4,7 +4,7 @@ import { Truck, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@chairestrucking.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
@@ -14,12 +14,13 @@ export default function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
+    if (!email) { setError('Ingresa tu correo electrónico'); return; }
     if (!password) { setError('Ingresa tu contraseña'); return; }
     const ok = login(email, password);
     if (ok) {
       navigate('/', { replace: true });
     } else {
-      setError('Credenciales incorrectas. Usa admin@chairestrucking.com');
+      setError('Contraseña incorrecta. Contacta al administrador.');
     }
   };
 
@@ -92,7 +93,7 @@ export default function Login() {
             </button>
 
             <p className="text-center text-xs text-gray-400">
-              Usa cualquier contraseña con el correo admin
+              Ingresa tu correo y la contraseña del equipo
             </p>
           </form>
         </div>

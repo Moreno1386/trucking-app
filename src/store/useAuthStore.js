@@ -7,13 +7,13 @@ const useAuthStore = create(
       user: null,
       isAuthenticated: false,
 
-      login: (email, _password) => {
-        if (email === 'admin@chairestrucking.com') {
+      login: (email, password) => {
+        if (password === 'chaires2026') {
           const user = {
-            id: '1',
+            id: email,
             email,
             role: 'admin',
-            nombre: 'Administrador',
+            nombre: email.split('@')[0],
           };
           set({ user, isAuthenticated: true });
           return true;
