@@ -40,7 +40,7 @@ function Facturas() {
   const openAdd = () => { setEditItem(null); setForm(emptyFactura); setShowModal(true); };
   const openEdit = (f) => { setEditItem(f); setForm({ ...f }); setShowModal(true); };
   const handleDelete = (f) => {
-    if (window.confirm(`¿Eliminar gasto ${f.numero_factura}?`)) deleteFactura(f.id);
+    if (window.confirm(`¿Eliminar entrada ${f.numero_factura}?`)) deleteFactura(f.id);
   };
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,11 +60,11 @@ function Facturas() {
       <div className="flex items-center justify-between p-5 border-b">
         <div className="flex items-center gap-2">
           <FileText className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-bold text-gray-900">Gastos</h2>
+          <h2 className="text-lg font-bold text-gray-900">Entradas</h2>
           <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{facturas.length}</span>
         </div>
         <button onClick={openAdd} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-          <Plus className="w-4 h-4" /> Nuevo Gasto
+          <Plus className="w-4 h-4" /> Nueva Entrada
         </button>
       </div>
 
@@ -117,7 +117,7 @@ function Facturas() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between p-5 border-b">
-              <h3 className="font-bold text-gray-900">Gasto {showDetail.numero_factura}</h3>
+              <h3 className="font-bold text-gray-900">Entrada {showDetail.numero_factura}</h3>
               <button onClick={() => setShowDetail(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-5 grid grid-cols-2 gap-4 text-sm">
@@ -149,7 +149,7 @@ function Facturas() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
             <div className="flex items-center justify-between p-5 border-b">
-              <h3 className="font-bold text-gray-900">{editItem ? 'Editar Gasto' : 'Nuevo Gasto'}</h3>
+              <h3 className="font-bold text-gray-900">{editItem ? 'Editar Entrada' : 'Nueva Entrada'}</h3>
               <button onClick={() => { setShowModal(false); setEditItem(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
@@ -184,7 +184,7 @@ function Facturas() {
               </div>
               <div className="flex justify-end gap-3 pt-2 border-t">
                 <button type="button" onClick={() => { setShowModal(false); setEditItem(null); }} className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">{editItem ? 'Actualizar' : 'Guardar Gasto'}</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">{editItem ? 'Actualizar' : 'Guardar Entrada'}</button>
               </div>
             </form>
           </div>
@@ -301,7 +301,7 @@ function Gastos() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
             <div className="flex items-center justify-between p-5 border-b">
-              <h3 className="font-bold text-gray-900">{editItem ? 'Editar Gasto' : 'Nuevo Gasto'}</h3>
+              <h3 className="font-bold text-gray-900">{editItem ? 'Editar Entrada' : 'Nueva Entrada'}</h3>
               <button onClick={() => { setShowModal(false); setEditItem(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
