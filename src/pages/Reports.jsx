@@ -66,7 +66,7 @@ const emptyTruckForm = {
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent';
 
 // ── SECCIÓN 1: Ingresos vs Gastos por Unidad ─────────────────────
-function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
+function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips, viajesAdmin }) {
   const { addTruck, updateTruck, deleteTruck } = useFleetStore();
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState(null);
@@ -109,11 +109,24 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
     }).sort((a, b) => b.rentabilidad - a.rentabilidad);
   }, [trucks, facturas, gastos, maintenance, trips]);
 
+  // Agrupar viajesAdmin por unidad
+  const viajesPorUnidad = useMemo(() => {
+    const map = {};
+    viajesAdmin.forEach((v) => {
+      const u = v.unidad || '—';
+      if (!map[u]) map[u] = { unidad: u, nombre: u, ingresos: 0, gastos: 0, combustible: 0, rentabilidad: 0, truck: null };
+      map[u].ingresos += parseMoney(v.costo_servicio);
+      map[u].combustible += parseMoney(v.diesel);
+      map[u].gastos += parseMoney(v.casetas_efectivo) + parseMoney(v.casetas_televia) + parseMoney(v.otros_gastos) + parseMoney(v.pago_operador);
+    });
+    return Object.values(map).map((r) => ({ ...r, rentabilidad: r.ingresos - r.gastos - r.combustible }))
+      .sort((a, b) => b.rentabilidad - a.rentabilidad);
+  }, [viajesAdmin]);
+
   const hasTrucks = trucks.length > 0;
+  const hasViajesAdmin = viajesPorUnidad.length > 0;
   const hasFinancial = data.some((d) => d.ingresos > 0 || d.gastos > 0 || d.combustible > 0);
-  // Si hay camiones reales, siempre los mostramos (aunque tengan $0).
-  // Solo mostramos ficticios cuando la BD está completamente vacía de camiones.
-  const display = hasTrucks ? data : DEMO_UNIT_DATA.map((d) => ({ ...d, truck: null }));
+  const display = hasViajesAdmin ? viajesPorUnidad : (hasTrucks ? data : DEMO_UNIT_DATA.map((d) => ({ ...d, truck: null })));
 
   return (
     <div className="space-y-6" id="section-units">
@@ -338,18 +351,18 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips }) {
 }
 
 // ── SECCIÓN 2: Rentabilidad por Viaje ────────────────────────────
-function SeccionViajes({ trips, trucks, drivers, maintenance }) {
+function SeccionViajes({ trips, trucks, drivers, maintenance, viajesAdmin }) {
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
-  const [filtroCamion, setFiltroCamion] = useState('');
+  const [filtroUnidad, setFiltroUnidad] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
   const getTruck = (id) => trucks.find((t) => t.id === id);
   const getDriver = (id) => drivers.find((d) => d.id === id);
 
   const tripData = useMemo(() => {
-    const completed = trips.filter((t) => t.estado === 'completado' || t.estado === 'en_curso');
-    return completed.map((trip) => {
+    // Viajes de despacho
+    const dispatchRows = trips.filter((t) => t.estado === 'completado' || t.estado === 'en_curso').map((trip) => {
       const truck = getTruck(trip.camion_id);
       const driver = getDriver(trip.chofer_id);
       const ingreso = parseMoney(trip.costo_flete ?? trip.costo);
@@ -358,31 +371,40 @@ function SeccionViajes({ trips, trucks, drivers, maintenance }) {
         .filter((m) => m.camion_id === trip.camion_id)
         .reduce((s, m) => s + parseMoney(m.costo), 0) / Math.max(trips.filter((t) => t.camion_id === trip.camion_id).length, 1);
       const margen = ingreso - combustible - mant;
-      const pctMargen = ingreso > 0 ? (margen / ingreso) * 100 : 0;
       return {
-        id: trip.id,
-        folio: trip.numero_viaje ?? trip.id?.slice(0, 6) ?? '—',
-        origen: trip.origen,
-        destino: trip.destino,
-        cliente: trip.cliente,
-        unidad: truck?.numero_unidad ?? '—',
-        camion_id: trip.camion_id,
+        id: trip.id, folio: trip.numero_viaje ?? trip.id?.slice(0, 6) ?? '—',
+        destino: trip.destino, unidad: truck?.numero_unidad ?? '—', camion_id: trip.camion_id,
         chofer: driver ? `${driver.nombre} ${driver.apellido_paterno}` : '—',
-        fecha: trip.fecha_salida,
-        ingreso,
-        combustible,
-        mantenimiento: mant,
-        margen,
-        pctMargen,
+        fecha: trip.fecha_salida, ingreso, combustible, mantenimiento: mant,
+        margen, pctMargen: ingreso > 0 ? (margen / ingreso) * 100 : 0,
       };
     });
-  }, [trips, trucks, drivers, maintenance]);
+
+    // Viajes del Registro Administrativo
+    const adminRows = viajesAdmin.map((v) => {
+      const ingreso = parseMoney(v.costo_servicio);
+      const combustible = parseMoney(v.diesel);
+      const otros = parseMoney(v.casetas_efectivo) + parseMoney(v.casetas_televia) + parseMoney(v.otros_gastos) + parseMoney(v.pago_operador);
+      const margen = ingreso - combustible - otros;
+      return {
+        id: v.id, folio: '—',
+        destino: v.destino, unidad: v.unidad, camion_id: null,
+        chofer: v.operador, fecha: v.fecha,
+        ingreso, combustible, mantenimiento: otros,
+        margen, pctMargen: ingreso > 0 ? (margen / ingreso) * 100 : 0,
+      };
+    });
+
+    return [...adminRows, ...dispatchRows].sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+  }, [trips, trucks, drivers, maintenance, viajesAdmin]);
+
+  const unidades = useMemo(() => [...new Set(tripData.map((r) => r.unidad).filter(Boolean))].sort(), [tripData]);
 
   const hasData = tripData.length > 0;
   const displayRaw = hasData ? tripData : DEMO_TRIPS.map((d) => ({ ...d, pctMargen: d.margen > 0 ? (d.margen / d.ingreso) * 100 : 0 }));
 
   const display = displayRaw.filter((row) => {
-    if (filtroCamion && row.camion_id !== filtroCamion) return false;
+    if (filtroUnidad && row.unidad !== filtroUnidad) return false;
     if (fechaInicio && row.fecha < fechaInicio) return false;
     if (fechaFin && row.fecha > fechaFin) return false;
     return true;
@@ -425,15 +447,15 @@ function SeccionViajes({ trips, trucks, drivers, maintenance }) {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1 font-medium">Camión</label>
-              <select value={filtroCamion} onChange={(e) => setFiltroCamion(e.target.value)}
+              <label className="block text-xs text-gray-500 mb-1 font-medium">Unidad</label>
+              <select value={filtroUnidad} onChange={(e) => setFiltroUnidad(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
-                <option value="">Todos</option>
-                {trucks.map((t) => <option key={t.id} value={t.id}>{t.numero_unidad} — {t.marca} {t.modelo}</option>)}
+                <option value="">Todas</option>
+                {unidades.map((u) => <option key={u} value={u}>{u}</option>)}
               </select>
             </div>
             <div className="sm:col-span-3 flex justify-end">
-              <button onClick={() => { setFechaInicio(''); setFechaFin(''); setFiltroCamion(''); }}
+              <button onClick={() => { setFechaInicio(''); setFechaFin(''); setFiltroUnidad(''); }}
                 className="text-xs text-gray-500 hover:text-red-600 underline">Limpiar filtros</button>
             </div>
           </div>
@@ -445,21 +467,19 @@ function SeccionViajes({ trips, trucks, drivers, maintenance }) {
         <table className="w-full text-xs">
           <thead className="bg-gray-50">
             <tr>
-              {['Folio', 'Ruta', 'Cliente', 'Unidad', 'Chofer', 'Fecha', 'Ingreso', 'Combustible', 'Mantenimiento', 'Margen neto', '% Margen'].map((h) => (
+              {['Destino', 'Operador', 'Unidad', 'Fecha', 'Costo Serv.', 'Diesel', 'Casetas/Otros', 'Utilidad', '% Utilidad'].map((h) => (
                 <th key={h} className="px-3 py-3 text-left font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 bg-white">
             {display.length === 0 ? (
-              <tr><td colSpan={11} className="py-10 text-center text-gray-400">Sin viajes con los filtros seleccionados</td></tr>
+              <tr><td colSpan={9} className="py-10 text-center text-gray-400">Sin viajes con los filtros seleccionados</td></tr>
             ) : display.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-3 py-2.5 font-medium text-gray-900">{row.folio}</td>
-                <td className="px-3 py-2.5 whitespace-nowrap text-gray-700">{row.origen} → {row.destino}</td>
-                <td className="px-3 py-2.5 text-gray-600">{row.cliente}</td>
-                <td className="px-3 py-2.5 font-medium text-gray-900">{row.unidad}</td>
-                <td className="px-3 py-2.5 text-gray-600">{row.chofer}</td>
+              <tr key={row.id} className="hover:bg-orange-50 transition-colors">
+                <td className="px-3 py-2.5 font-medium text-gray-900 whitespace-nowrap">{row.destino}</td>
+                <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{row.chofer}</td>
+                <td className="px-3 py-2.5"><span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{row.unidad}</span></td>
                 <td className="px-3 py-2.5 whitespace-nowrap text-gray-500">{formatDate(row.fecha)}</td>
                 <td className="px-3 py-2.5 text-right font-medium text-green-600">{formatCurrency(row.ingreso)}</td>
                 <td className="px-3 py-2.5 text-right text-orange-500">{formatCurrency(row.combustible)}</td>
@@ -474,9 +494,9 @@ function SeccionViajes({ trips, trucks, drivers, maintenance }) {
             ))}
           </tbody>
           {display.length > 0 && (
-            <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+            <tfoot className="bg-orange-50 border-t-2 border-orange-200">
               <tr>
-                <td colSpan={6} className="px-3 py-3 text-xs font-bold text-gray-600 uppercase">{display.length} viaje{display.length !== 1 ? 's' : ''}</td>
+                <td colSpan={4} className="px-3 py-3 text-xs font-bold text-gray-600 uppercase">{display.length} viaje{display.length !== 1 ? 's' : ''}</td>
                 <td className="px-3 py-3 text-right font-bold text-green-700">{formatCurrency(totals.ingreso)}</td>
                 <td className="px-3 py-3 text-right font-bold text-orange-600">{formatCurrency(totals.combustible)}</td>
                 <td className="px-3 py-3 text-right font-bold text-red-600">{formatCurrency(totals.mantenimiento)}</td>
@@ -494,7 +514,7 @@ function SeccionViajes({ trips, trucks, drivers, maintenance }) {
 }
 
 // ── SECCIÓN 3: Gráficas Mensuales ────────────────────────────────
-function SeccionGraficas({ facturas, gastos, maintenance, trips }) {
+function SeccionGraficas({ facturas, gastos, maintenance, trips, viajesAdmin }) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
 
@@ -539,11 +559,25 @@ function SeccionGraficas({ facturas, gastos, maintenance, trips }) {
       byMonth[d.getMonth()].otros += parseMoney(g.monto ?? g.cantidad);
     });
 
+    // ── Datos de Registro de Viajes (Admin) ──
+    viajesAdmin.forEach((v) => {
+      if (!v.fecha) return;
+      const d = new Date(v.fecha + 'T12:00:00');
+      if (d.getFullYear() !== year) return;
+      byMonth[d.getMonth()].facturacion += parseMoney(v.costo_servicio);
+      byMonth[d.getMonth()].combustible += parseMoney(v.diesel);
+      byMonth[d.getMonth()].otros +=
+        parseMoney(v.casetas_efectivo) +
+        parseMoney(v.casetas_televia) +
+        parseMoney(v.otros_gastos) +
+        parseMoney(v.pago_operador);
+    });
+
     return byMonth.map((m) => ({
       ...m,
       balance: m.facturacion - m.combustible - m.mantenimiento - m.otros,
     }));
-  }, [facturas, gastos, maintenance, trips, year]);
+  }, [facturas, gastos, maintenance, trips, viajesAdmin, year]);
 
   const hasData = monthlyData.some((m) => m.facturacion > 0 || m.mantenimiento > 0);
   const display = hasData ? monthlyData : buildDemoMonthly(year);
@@ -949,15 +983,17 @@ const TABS = [
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('units');
-  const { trucks, drivers, trips, maintenance, facturas, gastos } = useFleetStore();
+  const { trucks, drivers, trips, maintenance, facturas, gastos, viajesAdmin } = useFleetStore();
   const chartsRef = useRef(null);
 
   const totalFacturado =
     facturas.reduce((s, f) => s + parseMoney(f.monto), 0) +
-    trips.filter((t) => t.estado === 'completado').reduce((s, t) => s + parseMoney(t.costo_flete ?? t.costo), 0);
+    trips.filter((t) => t.estado === 'completado').reduce((s, t) => s + parseMoney(t.costo_flete ?? t.costo), 0) +
+    viajesAdmin.reduce((s, v) => s + parseMoney(v.costo_servicio), 0);
   const totalGastos =
     gastos.reduce((s, g) => s + parseMoney(g.monto ?? g.cantidad), 0) +
-    maintenance.reduce((s, m) => s + parseMoney(m.costo), 0);
+    maintenance.reduce((s, m) => s + parseMoney(m.costo), 0) +
+    viajesAdmin.reduce((s, v) => s + parseMoney(v.diesel) + parseMoney(v.casetas_efectivo) + parseMoney(v.casetas_televia) + parseMoney(v.otros_gastos) + parseMoney(v.pago_operador), 0);
   const balance = totalFacturado - totalGastos;
 
   return (
@@ -1029,18 +1065,18 @@ export default function Reports() {
           {activeTab === 'units' && (
             <SeccionUnidades
               trucks={trucks} facturas={facturas} gastos={gastos}
-              maintenance={maintenance} trips={trips}
+              maintenance={maintenance} trips={trips} viajesAdmin={viajesAdmin}
             />
           )}
           {activeTab === 'trips' && (
             <SeccionViajes
-              trips={trips} trucks={trucks} drivers={drivers} maintenance={maintenance}
+              trips={trips} trucks={trucks} drivers={drivers} maintenance={maintenance} viajesAdmin={viajesAdmin}
             />
           )}
           {activeTab === 'charts' && (
             <div ref={chartsRef}>
               <SeccionGraficas
-                facturas={facturas} gastos={gastos} maintenance={maintenance} trips={trips}
+                facturas={facturas} gastos={gastos} maintenance={maintenance} trips={trips} viajesAdmin={viajesAdmin}
               />
             </div>
           )}
