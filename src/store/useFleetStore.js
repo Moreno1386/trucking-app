@@ -96,21 +96,6 @@ const useFleetStore = create((set, get) => ({
       });
     }
 
-    // Seed viajes iniciales si la tabla está vacía
-    if ((va.data || []).length === 0) {
-      const initialViajesAdmin = [
-        { id: newId(), fecha: '2026-03-31', destino: '3 EN QUERETARO-GUANAJUATO', operador: 'LUIS REYES', unidad: '58AZ3W', costo_servicio: 24900, diesel: 4958.55, casetas_efectivo: 0, casetas_televia: 1019, otros_gastos: 250, pago_operador: 3600, created_at: now() },
-        { id: newId(), fecha: '2026-03-31', destino: 'EATON', operador: 'DEMETRIO RDZ.', unidad: '48AL8C', costo_servicio: 21230, diesel: 2941.02, casetas_efectivo: 0, casetas_televia: 1289, otros_gastos: 0, pago_operador: 2880, created_at: now() },
-        { id: newId(), fecha: '2026-04-01', destino: 'SAN LUIS POTOSI', operador: 'ANTONIO GTZ.', unidad: '30BG5S', costo_servicio: 19700, diesel: 4653.77, casetas_efectivo: 0, casetas_televia: 2220, otros_gastos: 0, pago_operador: 2340, created_at: now() },
-        { id: newId(), fecha: '2026-04-01', destino: 'HIROTEC', operador: 'ULISES RIVERA', unidad: '23BC1C', costo_servicio: 33000, diesel: 7369.10, casetas_efectivo: 994, casetas_televia: 0, otros_gastos: 0, pago_operador: 3960, created_at: now() },
-        { id: newId(), fecha: '2026-04-06', destino: 'CELAYA-QUERETARO', operador: 'IVAN HERNANDEZ', unidad: '91BK4L', costo_servicio: 28800, diesel: 6580.52, casetas_efectivo: 630, casetas_televia: 500, otros_gastos: 0, pago_operador: 4140, created_at: now() },
-        { id: newId(), fecha: '2026-04-07', destino: 'RUTA MORELOS', operador: 'LUIS REYES', unidad: '58AZ3W', costo_servicio: 41900, diesel: 7394.36, casetas_efectivo: 1137, casetas_televia: 800, otros_gastos: 0, pago_operador: 5220, created_at: now() },
-        { id: newId(), fecha: '2026-04-08', destino: 'SILAO-HIROTEC', operador: 'IVAN HERNANDEZ', unidad: '91BK4L', costo_servicio: 32560, diesel: 4959.77, casetas_efectivo: 1267, casetas_televia: 0, otros_gastos: 0, pago_operador: 2430, created_at: now() },
-        { id: newId(), fecha: '2026-04-09', destino: 'OAXACA,OAX.', operador: 'JOSE JORDAN', unidad: '30BG5S', costo_servicio: 45500, diesel: 5000, casetas_efectivo: 0, casetas_televia: 3948, otros_gastos: 0, pago_operador: 5760, created_at: now() },
-      ];
-      const { error: seedErr } = await supabase.from('viajes_admin').insert(initialViajesAdmin);
-      if (!seedErr) set({ viajesAdmin: initialViajesAdmin });
-    }
   },
 
   // ── Tiempo real (Supabase Realtime) ──────────────────────────
