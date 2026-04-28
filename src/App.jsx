@@ -15,6 +15,7 @@ import CreditCards from './pages/CreditCards';
 import Settings from './pages/Settings';
 import Admin from './pages/Admin';
 import Reports from './pages/Reports';
+import Contabilidad from './pages/Contabilidad';
 
 function Protected({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -60,6 +61,7 @@ export default function App() {
             <Route path="credit-cards" element={<CreditCards />} />
             <Route path="admin" element={<Admin />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="contabilidad" element={<Contabilidad />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
