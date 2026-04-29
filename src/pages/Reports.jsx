@@ -659,32 +659,34 @@ function SeccionGraficas({ facturas, gastos, maintenance, trips, viajesAdmin }) 
 }
 
 // ── SECCIÓN 4: Exportar ───────────────────────────────────────────
-function SeccionExportar({ trucks, facturas, gastos, maintenance, trips, chartsRef }) {
+function SeccionExportar({ trucks, facturas, gastos, maintenance, trips, viajesAdmin, chartsRef }) {
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [loadingXls, setLoadingXls] = useState(false);
 
+  // Agrupa viajesAdmin por unidad — fuente de datos real
   const getUnitData = () => {
-    return trucks.map((truck) => {
-      const ingresos =
-        facturas.filter((f) => f.camion_id === truck.id).reduce((s, f) => s + parseMoney(f.monto), 0) +
-        trips.filter((t) => t.camion_id === truck.id && (t.estado === 'completado' || t.estado === 'en_curso'))
-          .reduce((s, t) => s + parseMoney(t.costo_flete ?? t.costo), 0);
-      const gastosAdmin = gastos.filter((g) => g.camion_id === truck.id).reduce((s, g) => s + parseMoney(g.monto ?? g.cantidad), 0);
-      const gastosMantenimiento = maintenance.filter((m) => m.camion_id === truck.id).reduce((s, m) => s + parseMoney(m.costo), 0);
-      const combustible = trips.filter((t) => t.camion_id === truck.id).reduce((s, t) => s + parseMoney(t.combustible_costo), 0);
-      const totalGastos = gastosAdmin + gastosMantenimiento;
-      return {
-        Unidad: truck.numero_unidad,
-        Camión: `${truck.marca} ${truck.modelo}`,
-        'Ingresos (MXN)': ingresos,
-        'Gastos Admin (MXN)': gastosAdmin,
-        'Mantenimiento (MXN)': gastosMantenimiento,
-        'Combustible (MXN)': combustible,
-        'Total Gastos (MXN)': totalGastos,
-        'Rentabilidad (MXN)': ingresos - totalGastos - combustible,
-      };
-    }).sort((a, b) => b['Rentabilidad (MXN)'] - a['Rentabilidad (MXN)']);
+    const map = {};
+    viajesAdmin.forEach((v) => {
+      const u = v.unidad || '—';
+      if (!map[u]) map[u] = { unidad: u, ingresos: 0, diesel: 0, otrosGastos: 0 };
+      map[u].ingresos    += parseMoney(v.costo_servicio);
+      map[u].diesel      += parseMoney(v.diesel);
+      map[u].otrosGastos += parseMoney(v.casetas_efectivo) + parseMoney(v.casetas_televia) + parseMoney(v.otros_gastos) + parseMoney(v.pago_operador);
+    });
+    return Object.values(map).map((r) => ({
+      Unidad: r.unidad,
+      'Ingresos (MXN)': r.ingresos,
+      'Diesel (MXN)': r.diesel,
+      'Otros Gastos (MXN)': r.otrosGastos,
+      'Total Gastos (MXN)': r.diesel + r.otrosGastos,
+      'Utilidad (MXN)': r.ingresos - r.diesel - r.otrosGastos,
+    })).sort((a, b) => b['Utilidad (MXN)'] - a['Utilidad (MXN)']);
   };
+
+  // Totales reales desde viajesAdmin
+  const totalFacturado = viajesAdmin.reduce((s, v) => s + parseMoney(v.costo_servicio), 0);
+  const totalGastos    = viajesAdmin.reduce((s, v) =>
+    s + parseMoney(v.diesel) + parseMoney(v.casetas_efectivo) + parseMoney(v.casetas_televia) + parseMoney(v.otros_gastos) + parseMoney(v.pago_operador), 0);
 
   const exportExcel = async () => {
     setLoadingXls(true);
@@ -692,52 +694,44 @@ function SeccionExportar({ trucks, facturas, gastos, maintenance, trips, chartsR
       const XLSX = await import('xlsx');
       const wb = XLSX.utils.book_new();
 
-      // Hoja 1: Unidades
+      // Hoja 1: Rentabilidad por Unidad
       const unitData = getUnitData();
       const ws1 = XLSX.utils.json_to_sheet(unitData.length > 0 ? unitData : [{ Nota: 'Sin datos registrados' }]);
-      XLSX.utils.book_append_sheet(wb, ws1, 'Ingresos vs Gastos');
+      ws1['!cols'] = [{ wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 14 }];
+      XLSX.utils.book_append_sheet(wb, ws1, 'Rentabilidad por Unidad');
 
-      // Hoja 2: Viajes
-      const tripRows = trips
-        .filter((t) => t.estado === 'completado' || t.estado === 'en_curso')
-        .map((trip) => {
-          const truck = trucks.find((t) => t.id === trip.camion_id);
-          const driver = trucks.find(() => false); // placeholder
-          return {
-            Folio: trip.numero_viaje ?? trip.id?.slice(0, 8),
-            Origen: trip.origen,
-            Destino: trip.destino,
-            Cliente: trip.cliente,
-            Unidad: truck?.numero_unidad ?? '—',
-            Fecha: trip.fecha_salida,
-            'Ingreso (MXN)': parseMoney(trip.costo_flete ?? trip.costo),
-            'Combustible (MXN)': parseMoney(trip.combustible_costo),
-            Estado: trip.estado,
-          };
-        });
-      const ws2 = XLSX.utils.json_to_sheet(tripRows.length > 0 ? tripRows : [{ Nota: 'Sin viajes completados' }]);
+      // Hoja 2: Detalle de Viajes (viajesAdmin)
+      const tripRows = viajesAdmin.map((v) => ({
+        Fecha: formatDate(v.fecha),
+        Destino: v.destino,
+        Operador: v.operador,
+        Unidad: v.unidad,
+        'Costo Servicio (MXN)': parseMoney(v.costo_servicio),
+        'Diesel (MXN)': parseMoney(v.diesel),
+        'Casetas Efectivo (MXN)': parseMoney(v.casetas_efectivo),
+        'Casetas Televia (MXN)': parseMoney(v.casetas_televia),
+        'Otros Gastos (MXN)': parseMoney(v.otros_gastos),
+        'Pago Operador (MXN)': parseMoney(v.pago_operador),
+        'Utilidad (MXN)': parseMoney(v.costo_servicio) - parseMoney(v.diesel) - parseMoney(v.casetas_efectivo) - parseMoney(v.casetas_televia) - parseMoney(v.otros_gastos) - parseMoney(v.pago_operador),
+      }));
+      const ws2 = XLSX.utils.json_to_sheet(tripRows.length > 0 ? tripRows : [{ Nota: 'Sin viajes registrados' }]);
+      ws2['!cols'] = [{ wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 10 }, { wch: 18 }, { wch: 12 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 14 }];
       XLSX.utils.book_append_sheet(wb, ws2, 'Detalle de Viajes');
 
-      // Hoja 3: Resumen mensual
+      // Hoja 3: Resumen mensual desde viajesAdmin
       const year = new Date().getFullYear();
       const monthlyRows = MONTHS.map((mes, i) => {
-        const mesFacturas = facturas
-          .filter((f) => f.fecha && new Date(f.fecha + 'T12:00:00').getFullYear() === year && new Date(f.fecha + 'T12:00:00').getMonth() === i)
-          .reduce((s, f) => s + parseMoney(f.monto), 0);
-        const mesTrips = trips
-          .filter((t) => { const f = t.fecha_salida || t.fecha; return f && new Date(f + 'T12:00:00').getFullYear() === year && new Date(f + 'T12:00:00').getMonth() === i; })
-          .reduce((s, t) => s + parseMoney(t.costo_flete ?? t.costo), 0);
-        const mesGastos = gastos
-          .filter((g) => g.fecha && new Date(g.fecha + 'T12:00:00').getFullYear() === year && new Date(g.fecha + 'T12:00:00').getMonth() === i)
-          .reduce((s, g) => s + parseMoney(g.monto ?? g.cantidad), 0);
-        const mesMant = maintenance
-          .filter((m) => m.fecha && new Date(m.fecha + 'T12:00:00').getFullYear() === year && new Date(m.fecha + 'T12:00:00').getMonth() === i)
-          .reduce((s, m) => s + parseMoney(m.costo), 0);
-        const ingresos = mesFacturas + mesTrips;
-        const egresos = mesGastos + mesMant;
-        return { Mes: mes, Año: year, 'Ingresos (MXN)': ingresos, 'Gastos (MXN)': egresos, 'Balance (MXN)': ingresos - egresos };
+        const delMes = viajesAdmin.filter((v) => {
+          if (!v.fecha) return false;
+          const d = new Date(v.fecha + 'T12:00:00');
+          return d.getFullYear() === year && d.getMonth() === i;
+        });
+        const ingresos = delMes.reduce((s, v) => s + parseMoney(v.costo_servicio), 0);
+        const egresos  = delMes.reduce((s, v) => s + parseMoney(v.diesel) + parseMoney(v.casetas_efectivo) + parseMoney(v.casetas_televia) + parseMoney(v.otros_gastos) + parseMoney(v.pago_operador), 0);
+        return { Mes: mes, Año: year, Viajes: delMes.length, 'Ingresos (MXN)': ingresos, 'Gastos (MXN)': egresos, 'Utilidad (MXN)': ingresos - egresos };
       });
       const ws3 = XLSX.utils.json_to_sheet(monthlyRows);
+      ws3['!cols'] = [{ wch: 8 }, { wch: 6 }, { wch: 8 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
       XLSX.utils.book_append_sheet(wb, ws3, 'Resumen Mensual');
 
       XLSX.writeFile(wb, `Reporte_ChairesT_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -781,16 +775,11 @@ function SeccionExportar({ trucks, facturas, gastos, maintenance, trips, chartsR
       doc.text('Resumen Ejecutivo', margin, y);
       y += 7;
 
-      const totalFacturado = facturas.reduce((s, f) => s + parseMoney(f.monto), 0) +
-        trips.filter((t) => t.estado === 'completado').reduce((s, t) => s + parseMoney(t.costo_flete ?? t.costo), 0);
-      const totalGastos = gastos.reduce((s, g) => s + parseMoney(g.monto ?? g.cantidad), 0) +
-        maintenance.reduce((s, m) => s + parseMoney(m.costo), 0);
       const balance = totalFacturado - totalGastos;
-
       const cards = [
-        { label: 'Total Facturado', val: formatCurrency(totalFacturado), color: [22, 163, 74] },
+        { label: 'Total Ingresos', val: formatCurrency(totalFacturado), color: [22, 163, 74] },
         { label: 'Total Gastos', val: formatCurrency(totalGastos), color: [220, 38, 38] },
-        { label: 'Balance Neto', val: formatCurrency(balance), color: balance >= 0 ? [22, 163, 74] : [220, 38, 38] },
+        { label: 'Utilidad Neta', val: formatCurrency(balance), color: balance >= 0 ? [22, 163, 74] : [220, 38, 38] },
       ];
 
       const colW = (pageW - margin * 2 - 8) / 3;
@@ -817,11 +806,10 @@ function SeccionExportar({ trucks, facturas, gastos, maintenance, trips, chartsR
       y += 6;
 
       const unitData = getUnitData();
-      const headers = ['Unidad', 'Camión', 'Ingresos', 'Gastos', 'Rentabilidad'];
-      const colWidths = [20, 50, 36, 36, 36];
+      const headers = ['Unidad', 'Ingresos', 'Diesel', 'Otros Gastos', 'Utilidad'];
+      const colWidths = [25, 38, 32, 38, 35];
       const rowH = 7;
 
-      // Header row
       doc.setFillColor(220, 38, 38);
       doc.rect(margin, y, pageW - margin * 2, rowH, 'F');
       doc.setTextColor(255, 255, 255);
@@ -831,23 +819,26 @@ function SeccionExportar({ trucks, facturas, gastos, maintenance, trips, chartsR
       headers.forEach((h, i) => { doc.text(h, xCol, y + 5); xCol += colWidths[i]; });
       y += rowH;
 
-      // Data rows
       doc.setFont('helvetica', 'normal');
-      unitData.slice(0, 15).forEach((row, idx) => {
+      unitData.slice(0, 20).forEach((row, idx) => {
         if (y > pageH - 20) { doc.addPage(); y = margin; }
         doc.setFillColor(idx % 2 === 0 ? 255 : 249, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 251);
         doc.rect(margin, y, pageW - margin * 2, rowH, 'F');
         doc.setTextColor(31, 41, 55);
         doc.setFontSize(7.5);
         xCol = margin + 2;
-        [row['Unidad'], row['Camión'], formatCurrency(row['Ingresos (MXN)']), formatCurrency(row['Total Gastos (MXN)']), formatCurrency(row['Rentabilidad (MXN)'])].forEach((val, i) => {
-          if (i >= 2) {
-            const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
-            doc.setTextColor(i === 4 ? (num >= 0 ? 22 : 220) : 31, i === 4 ? (num >= 0 ? 163 : 38) : 41, i === 4 ? (num >= 0 ? 74 : 38) : 55);
-          }
+        const utilidad = row['Utilidad (MXN)'];
+        [
+          row['Unidad'],
+          formatCurrency(row['Ingresos (MXN)']),
+          formatCurrency(row['Diesel (MXN)']),
+          formatCurrency(row['Otros Gastos (MXN)']),
+          formatCurrency(utilidad),
+        ].forEach((val, i) => {
+          if (i === 4) doc.setTextColor(utilidad >= 0 ? 22 : 220, utilidad >= 0 ? 163 : 38, utilidad >= 0 ? 74 : 38);
+          else doc.setTextColor(31, 41, 55);
           doc.text(String(val), xCol, y + 5);
           xCol += colWidths[i];
-          doc.setTextColor(31, 41, 55);
         });
         y += rowH;
       });
@@ -886,11 +877,6 @@ function SeccionExportar({ trucks, facturas, gastos, maintenance, trips, chartsR
       setLoadingPdf(false);
     }
   };
-
-  const totalFacturado = facturas.reduce((s, f) => s + parseMoney(f.monto), 0) +
-    trips.filter((t) => t.estado === 'completado').reduce((s, t) => s + parseMoney(t.costo_flete ?? t.costo), 0);
-  const totalGastos = gastos.reduce((s, g) => s + parseMoney(g.monto ?? g.cantidad), 0) +
-    maintenance.reduce((s, m) => s + parseMoney(m.costo), 0);
 
   return (
     <div className="space-y-6">
@@ -1083,7 +1069,7 @@ export default function Reports() {
           {activeTab === 'export' && (
             <SeccionExportar
               trucks={trucks} facturas={facturas} gastos={gastos}
-              maintenance={maintenance} trips={trips} chartsRef={chartsRef}
+              maintenance={maintenance} trips={trips} viajesAdmin={viajesAdmin} chartsRef={chartsRef}
             />
           )}
         </div>
