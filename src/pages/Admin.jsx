@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { Truck, Plus, Edit, Trash2, X, Eye, Download } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Truck, Plus, Edit, Trash2, X, Eye, Download, Search, Filter, XCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import useFleetStore from '../store/useFleetStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
+
+const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent';
 
 function parseMonto(val) {
   return parseFloat(String(val).replace(/,/g, '')) || 0;
@@ -40,10 +42,55 @@ function ViajesAdmin() {
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState(emptyViaje);
 
-  const totalCosto = viajesAdmin.reduce((s, v) => s + parseMonto(v.costo_servicio), 0);
-  const totalGastos = viajesAdmin.reduce((s, v) =>
+  // ── Filtros ──────────────────────────────────────────────────
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroOperador, setFiltroOperador] = useState('');
+  const [filtroUnidad, setFiltroUnidad] = useState('');
+  const [filtroDesde, setFiltroDesde] = useState('');
+  const [filtroHasta, setFiltroHasta] = useState('');
+
+  // Opciones únicas para selects
+  const operadores = useMemo(() =>
+    [...new Set(viajesAdmin.map((v) => v.operador).filter(Boolean))].sort(),
+    [viajesAdmin]
+  );
+  const unidades = useMemo(() =>
+    [...new Set(viajesAdmin.map((v) => v.unidad).filter(Boolean))].sort(),
+    [viajesAdmin]
+  );
+
+  // Viajes filtrados
+  const viajesFiltrados = useMemo(() => {
+    const q = busqueda.toLowerCase().trim();
+    return viajesAdmin.filter((v) => {
+      const matchBusqueda = !q || (
+        (v.destino || '').toLowerCase().includes(q) ||
+        (v.operador || '').toLowerCase().includes(q) ||
+        (v.unidad || '').toLowerCase().includes(q)
+      );
+      const matchOperador = !filtroOperador || v.operador === filtroOperador;
+      const matchUnidad = !filtroUnidad || v.unidad === filtroUnidad;
+      const matchDesde = !filtroDesde || v.fecha >= filtroDesde;
+      const matchHasta = !filtroHasta || v.fecha <= filtroHasta;
+      return matchBusqueda && matchOperador && matchUnidad && matchDesde && matchHasta;
+    });
+  }, [viajesAdmin, busqueda, filtroOperador, filtroUnidad, filtroDesde, filtroHasta]);
+
+  const hayFiltros = busqueda || filtroOperador || filtroUnidad || filtroDesde || filtroHasta;
+
+  const limpiarFiltros = () => {
+    setBusqueda('');
+    setFiltroOperador('');
+    setFiltroUnidad('');
+    setFiltroDesde('');
+    setFiltroHasta('');
+  };
+
+  // Totales sobre los viajes filtrados
+  const totalCosto = viajesFiltrados.reduce((s, v) => s + parseMonto(v.costo_servicio), 0);
+  const totalGastos = viajesFiltrados.reduce((s, v) =>
     s + parseMonto(v.diesel) + parseMonto(v.casetas_efectivo) + parseMonto(v.casetas_televia) + parseMonto(v.otros_gastos) + parseMonto(v.pago_operador), 0);
-  const totalUtilidad = viajesAdmin.reduce((s, v) => s + calcUtilidad(v), 0);
+  const totalUtilidad = viajesFiltrados.reduce((s, v) => s + calcUtilidad(v), 0);
 
   const openAdd = () => { setEditItem(null); setForm(emptyViaje); setShowModal(true); };
   const openEdit = (v) => { setEditItem(v); setForm({ ...v }); setShowModal(true); };
@@ -52,7 +99,7 @@ function ViajesAdmin() {
   };
 
   const exportarExcel = () => {
-    const filas = viajesAdmin.map((v) => ({
+    const filas = viajesFiltrados.map((v) => ({
       'Fecha': formatDate(v.fecha),
       'Destino': v.destino,
       'Operador': v.operador,
@@ -65,20 +112,17 @@ function ViajesAdmin() {
       'Pago Operador': parseMonto(v.pago_operador),
       'Utilidad': calcUtilidad(v),
     }));
-
     const hoja = XLSX.utils.json_to_sheet(filas);
-
-    // Ancho de columnas
     hoja['!cols'] = [
       { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 10 },
       { wch: 15 }, { wch: 12 }, { wch: 16 }, { wch: 15 },
       { wch: 13 }, { wch: 14 }, { wch: 12 },
     ];
-
     const libro = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(libro, hoja, 'Viajes');
     XLSX.writeFile(libro, 'registro_viajes.xlsx');
   };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
@@ -100,7 +144,6 @@ function ViajesAdmin() {
   };
 
   const utilidadPreview = calcUtilidad(form);
-
   const thClass = 'px-3 py-2 text-left text-xs font-semibold text-white whitespace-nowrap';
   const tdClass = 'px-3 py-2 text-sm text-gray-800 whitespace-nowrap';
 
@@ -123,7 +166,79 @@ function ViajesAdmin() {
         </div>
       </div>
 
-      {/* Totales */}
+      {/* Barra de búsqueda y filtros */}
+      <div className="p-4 border-b bg-gray-50 space-y-3">
+        {/* Búsqueda */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por destino, operador o unidad..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white"
+          />
+          {busqueda && (
+            <button onClick={() => setBusqueda('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Filtros en fila */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <select
+            value={filtroOperador}
+            onChange={(e) => setFiltroOperador(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700"
+          >
+            <option value="">Todos los operadores</option>
+            {operadores.map((op) => <option key={op} value={op}>{op}</option>)}
+          </select>
+
+          <select
+            value={filtroUnidad}
+            onChange={(e) => setFiltroUnidad(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700"
+          >
+            <option value="">Todas las unidades</option>
+            {unidades.map((u) => <option key={u} value={u}>{u}</option>)}
+          </select>
+
+          <input
+            type="date"
+            value={filtroDesde}
+            onChange={(e) => setFiltroDesde(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700"
+            title="Desde"
+          />
+
+          <input
+            type="date"
+            value={filtroHasta}
+            onChange={(e) => setFiltroHasta(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700"
+            title="Hasta"
+          />
+        </div>
+
+        {/* Contador y limpiar */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500">
+            {hayFiltros
+              ? <span>Mostrando <span className="font-semibold text-orange-600">{viajesFiltrados.length}</span> de <span className="font-semibold">{viajesAdmin.length}</span> viajes</span>
+              : <span>Total: <span className="font-semibold">{viajesAdmin.length}</span> viajes</span>
+            }
+          </span>
+          {hayFiltros && (
+            <button onClick={limpiarFiltros} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors">
+              <XCircle className="w-3.5 h-3.5" /> Limpiar filtros
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Totales (sobre viajes filtrados) */}
       <div className="grid grid-cols-3 gap-4 p-5 border-b bg-orange-50">
         <div className="text-center">
           <div className="text-xs text-orange-500 mb-1">Total Costo Servicio</div>
@@ -140,8 +255,16 @@ function ViajesAdmin() {
       </div>
 
       {/* Tabla */}
-      {viajesAdmin.length === 0 ? (
-        <div className="py-12 text-center text-gray-400 text-sm">No hay viajes registrados</div>
+      {viajesFiltrados.length === 0 ? (
+        <div className="py-16 text-center space-y-2">
+          <Filter className="w-8 h-8 text-gray-300 mx-auto" />
+          <div className="text-gray-400 text-sm">
+            {viajesAdmin.length === 0 ? 'No hay viajes registrados' : 'No se encontraron viajes con esos filtros'}
+          </div>
+          {hayFiltros && (
+            <button onClick={limpiarFiltros} className="text-xs text-orange-600 hover:underline">Limpiar filtros</button>
+          )}
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-max">
@@ -162,7 +285,7 @@ function ViajesAdmin() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {viajesAdmin.map((v) => {
+              {viajesFiltrados.map((v) => {
                 const util = calcUtilidad(v);
                 return (
                   <tr key={v.id} className="hover:bg-orange-50 transition-colors">
@@ -177,7 +300,7 @@ function ViajesAdmin() {
                     <td className={`${tdClass} text-right`}>{parseMonto(v.otros_gastos) > 0 ? formatCurrency(v.otros_gastos) : <span className="text-gray-300">—</span>}</td>
                     <td className={`${tdClass} text-right`}>{formatCurrency(v.pago_operador)}</td>
                     <td className={`${tdClass} text-right font-bold text-green-700`}>{formatCurrency(util)}</td>
-                    <td className={`${tdClass}`}>
+                    <td className={tdClass}>
                       <div className="flex items-center gap-1">
                         <button onClick={() => setShowDetail(v)} className="text-gray-400 hover:text-gray-600"><Eye className="w-4 h-4" /></button>
                         <button onClick={() => openEdit(v)} className="text-blue-500 hover:text-blue-700"><Edit className="w-4 h-4" /></button>
@@ -212,10 +335,10 @@ function ViajesAdmin() {
                 ['Casetas Televia', formatCurrency(showDetail.casetas_televia)],
                 ['Otros Gastos', formatCurrency(showDetail.otros_gastos)],
                 ['Pago Operador', formatCurrency(showDetail.pago_operador)],
-              ].map(([k, v]) => (
+              ].map(([k, val]) => (
                 <div key={k}>
                   <div className="text-xs text-gray-400">{k}</div>
-                  <div className="font-medium text-gray-900">{v}</div>
+                  <div className="font-medium text-gray-900">{val}</div>
                 </div>
               ))}
               <div className="col-span-2 bg-green-50 rounded-lg p-3 border border-green-100">
@@ -237,53 +360,20 @@ function ViajesAdmin() {
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Fecha *</label>
-                  <input name="fecha" type="date" value={form.fecha} onChange={handleChange} required className={inp} />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Destino *</label>
-                  <input name="destino" type="text" value={form.destino} onChange={handleChange} required className={inp} placeholder="Ej. HIROTEC" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Operador</label>
-                  <input name="operador" type="text" value={form.operador} onChange={handleChange} className={inp} placeholder="Ej. LUIS REYES" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Unidad</label>
-                  <input name="unidad" type="text" value={form.unidad} onChange={handleChange} className={inp} placeholder="Ej. 58AZ3W" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Costo Servicio ($)</label>
-                  <input name="costo_servicio" type="text" value={form.costo_servicio} onChange={handleChange} className={inp} placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Diesel ($)</label>
-                  <input name="diesel" type="text" value={form.diesel} onChange={handleChange} className={inp} placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Casetas Efectivo ($)</label>
-                  <input name="casetas_efectivo" type="text" value={form.casetas_efectivo} onChange={handleChange} className={inp} placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Casetas Televia ($)</label>
-                  <input name="casetas_televia" type="text" value={form.casetas_televia} onChange={handleChange} className={inp} placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Otros Gastos ($)</label>
-                  <input name="otros_gastos" type="text" value={form.otros_gastos} onChange={handleChange} className={inp} placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Pago Operador ($)</label>
-                  <input name="pago_operador" type="text" value={form.pago_operador} onChange={handleChange} className={inp} placeholder="0.00" />
-                </div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Fecha *</label><input name="fecha" type="date" value={form.fecha} onChange={handleChange} required className={inp} /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Destino *</label><input name="destino" type="text" value={form.destino} onChange={handleChange} required className={inp} placeholder="Ej. HIROTEC" /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Operador</label><input name="operador" type="text" value={form.operador} onChange={handleChange} className={inp} placeholder="Ej. LUIS REYES" /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Unidad</label><input name="unidad" type="text" value={form.unidad} onChange={handleChange} className={inp} placeholder="Ej. 58AZ3W" /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Costo Servicio ($)</label><input name="costo_servicio" type="text" value={form.costo_servicio} onChange={handleChange} className={inp} placeholder="0.00" /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Diesel ($)</label><input name="diesel" type="text" value={form.diesel} onChange={handleChange} className={inp} placeholder="0.00" /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Casetas Efectivo ($)</label><input name="casetas_efectivo" type="text" value={form.casetas_efectivo} onChange={handleChange} className={inp} placeholder="0.00" /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Casetas Televia ($)</label><input name="casetas_televia" type="text" value={form.casetas_televia} onChange={handleChange} className={inp} placeholder="0.00" /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Otros Gastos ($)</label><input name="otros_gastos" type="text" value={form.otros_gastos} onChange={handleChange} className={inp} placeholder="0.00" /></div>
+                <div><label className="block text-xs font-medium text-gray-700 mb-1">Pago Operador ($)</label><input name="pago_operador" type="text" value={form.pago_operador} onChange={handleChange} className={inp} placeholder="0.00" /></div>
               </div>
-              {/* Utilidad en tiempo real */}
               <div className={`rounded-lg p-4 border ${utilidadPreview >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
                 <div className="text-xs text-gray-500 mb-1">Utilidad calculada automáticamente</div>
-                <div className={`text-2xl font-bold ${utilidadPreview >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                  {formatCurrency(utilidadPreview)}
-                </div>
+                <div className={`text-2xl font-bold ${utilidadPreview >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatCurrency(utilidadPreview)}</div>
                 <div className="text-xs text-gray-400 mt-1">Costo Serv. − Diesel − Casetas Ef. − Casetas Tele. − Otros Gastos − Pago Operador</div>
               </div>
               <div className="flex justify-end gap-3 pt-2 border-t">
@@ -306,13 +396,11 @@ export default function Admin() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Administrativo</h1>
         <p className="text-gray-500 text-sm">Control de viajes y utilidades</p>
       </div>
 
-      {/* Resumen */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 text-center">
           <div className="text-xs text-orange-500 mb-1">Viajes Registrados</div>
@@ -324,7 +412,6 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Secciones */}
       <ViajesAdmin />
     </div>
   );
