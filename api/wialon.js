@@ -39,7 +39,7 @@ export default async function handler(req, res) {
         sortType: 'sys_name',
       },
       force: 1,
-      flags: 257,
+      flags: 1025,
       from: 0,
       to: 0,
     };
@@ -54,14 +54,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Error al obtener unidades: ${searchData.error}` });
     }
 
-    const units = (searchData.items || []).map((unit) => ({
-      id: unit.id,
-      name: unit.nm,
-      mileage_km: unit.cnm != null ? Math.round(unit.cnm / 1000) : null,
-      last_pos: unit.pos
-        ? { lat: unit.pos.y, lon: unit.pos.x, speed: unit.pos.s, time: unit.pos.t }
-        : null,
-    }));
+    const units = (searchData.items || []).map((unit) => {
+      let mileage_km = null;
+      if (unit.cnm != null && unit.cnm > 0) {
+        mileage_km = Math.round(unit.cnm / 1000);
+      } else if (unit.pos && unit.pos.lc != null && unit.pos.lc > 0) {
+        mileage_km = Math.round(unit.pos.lc / 1000);
+      } else if (unit.cntrs && unit.cntrs.mileage != null) {
+        mileage_km = Math.round(unit.cntrs.mileage / 1000);
+      }
+      return { id: unit.id, name: unit.nm, mileage_km };
+    });
 
     return res.status(200).json({ units, total: units.length });
   } catch (err) {
