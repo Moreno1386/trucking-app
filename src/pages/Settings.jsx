@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Key, Send, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { Settings as SettingsIcon, Key, Send, CheckCircle, AlertCircle, Info, Wifi } from 'lucide-react';
 import { getTGConfig, saveTGConfig, sendTelegram } from '../utils/telegram';
 import { supabase } from '../lib/supabase';
 import useFleetStore from '../store/useFleetStore';
+import { getWialonToken, saveWialonToken } from '../lib/wialon';
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent';
 
@@ -13,9 +14,19 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [chats, setChats] = useState([]);
 
+  const [wialonToken, setWialonToken] = useState('');
+  const [wialonSaved, setWialonSaved] = useState(false);
+
   useEffect(() => {
     setConfig(getTGConfig());
+    setWialonToken(getWialonToken());
   }, []);
+
+  const handleSaveWialon = () => {
+    saveWialonToken(wialonToken.trim());
+    setWialonSaved(true);
+    setTimeout(() => setWialonSaved(false), 2000);
+  };
 
   const detectChats = async () => {
     if (!config.token) { alert('Ingresa el Token primero.'); return; }
@@ -207,6 +218,38 @@ export default function Settings() {
         >
           <Send className="w-4 h-4" />
           {status === 'sending' ? 'Enviando...' : 'Enviar alertas a Telegram'}
+        </button>
+      </div>
+
+      {/* Wialon GPS */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Wifi className="w-5 h-5 text-blue-600" />
+          <div>
+            <h2 className="font-semibold text-gray-800">Integración GPS — Wialon</h2>
+            <p className="text-xs text-gray-500">El token se usa para leer kilómetros de tus unidades desde Wialon</p>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">
+            Wialon API Token
+          </label>
+          <input
+            type="text"
+            placeholder="Pega aquí tu token de Wialon..."
+            value={wialonToken}
+            onChange={(e) => setWialonToken(e.target.value)}
+            className={inp}
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            En Wialon: nombre de usuario → Session management → copia un token con Full access
+          </p>
+        </div>
+        <button
+          onClick={handleSaveWialon}
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+        >
+          {wialonSaved ? '¡Guardado!' : 'Guardar Token Wialon'}
         </button>
       </div>
 

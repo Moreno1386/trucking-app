@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import {
-  Truck, Plus, Search, RefreshCw, Eye, Edit, Trash2, X, AlertTriangle,
+  Truck, Plus, Search, RefreshCw, Eye, Edit, Trash2, X, AlertTriangle, Wifi, WifiOff, CheckCircle,
 } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
 import { statusClass, statusLabel, formatNumber, getOilStatus } from '../utils/helpers';
+import { fetchWialonUnits, getWialonToken, saveWialonMapping, getWialonMapping } from '../lib/wialon';
 
 const STATUS_FILTERS = ['Todos', 'disponible', 'en_viaje', 'mantenimiento'];
 
@@ -139,6 +140,65 @@ export default function Fleet() {
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
+  // Wialon sync state
+  const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState('');
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [wialonUnits, setWialonUnits] = useState([]);
+  const [mapping, setMapping] = useState({}); // wialonId -> truckId
+  const [syncDone, setSyncDone] = useState(false);
+
+  const handleSync = async () => {
+    const token = getWialonToken();
+    if (!token) {
+      setSyncError('No hay token de Wialon configurado. Ve a Ajustes para guardarlo.');
+      setShowSyncModal(true);
+      return;
+    }
+    setSyncing(true);
+    setSyncError('');
+    setSyncDone(false);
+    try {
+      const units = await fetchWialonUnits(token);
+      console.log('Wialon units raw:', JSON.stringify(units[0]?.raw, null, 2));
+      setWialonUnits(units);
+      // Cargar mapeo guardado, y completar con auto-mapeo para unidades nuevas
+      const saved = getWialonMapping();
+      const autoMap = { ...saved };
+      units.forEach((u) => {
+        if (autoMap[u.id]) return; // ya tiene mapeo guardado
+        const match = trucks.find((t) =>
+          u.name.toLowerCase().includes(t.numero_unidad.toLowerCase()) ||
+          t.numero_unidad.toLowerCase().includes(u.name.toLowerCase())
+        );
+        if (match) autoMap[u.id] = match.id;
+      });
+      setMapping(autoMap);
+      setShowSyncModal(true);
+    } catch (err) {
+      setSyncError(err.message);
+      setShowSyncModal(true);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleApplySync = async () => {
+    // Guardar el mapeo para la próxima vez
+    saveWialonMapping(mapping);
+    for (const [wialonId, truckId] of Object.entries(mapping)) {
+      if (!truckId) continue;
+      const unit = wialonUnits.find((u) => String(u.id) === String(wialonId));
+      if (!unit || unit.mileage_km == null) continue;
+      await updateTruck(truckId, { kilometraje_actual: unit.mileage_km });
+    }
+    setSyncDone(true);
+    setTimeout(() => {
+      setShowSyncModal(false);
+      setSyncDone(false);
+    }, 1500);
+  };
+
   const filtered = trucks.filter((t) => {
     const q = search.toLowerCase();
     const matchSearch =
@@ -205,9 +265,13 @@ export default function Fleet() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-            <RefreshCw className="w-4 h-4" />
-            Sincronizar
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Conectando...' : 'Sincronizar GPS'}
           </button>
           <button
             onClick={openAdd}
@@ -300,6 +364,89 @@ export default function Fleet() {
                   <div className="text-xs text-gray-400">Notas</div>
                   <div className="text-gray-700">{showDetail.notas}</div>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wialon Sync Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between p-5 border-b">
+              <div className="flex items-center gap-2">
+                <Wifi className="w-5 h-5 text-blue-600" />
+                <h2 className="text-lg font-bold text-gray-900">Sincronizar GPS Wialon</h2>
+              </div>
+              <button onClick={() => setShowSyncModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              {syncError ? (
+                <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
+                  <WifiOff className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-red-700">Error de conexión</p>
+                    <p className="text-xs text-red-600 mt-1">{syncError}</p>
+                  </div>
+                </div>
+              ) : syncDone ? (
+                <div className="flex flex-col items-center py-6 gap-3">
+                  <CheckCircle className="w-12 h-12 text-green-500" />
+                  <p className="text-green-700 font-semibold">Kilometrajes actualizados</p>
+                </div>
+              ) : wialonUnits.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">No se encontraron unidades en Wialon.</p>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Se encontraron <strong>{wialonUnits.length}</strong> unidades en Wialon. Vincula cada una con un camión para actualizar sus kilómetros.
+                  </p>
+                  <div className="space-y-3 max-h-72 overflow-y-auto">
+                    {wialonUnits.map((unit) => (
+                      <div key={unit.id} className="border border-gray-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <span className="font-medium text-sm text-gray-900">{unit.name}</span>
+                            <span className="ml-2 text-xs text-blue-600 font-medium">
+                              {unit.mileage_km != null ? `${formatNumber(unit.mileage_km)} km` : 'Sin datos de km'}
+                            </span>
+                          </div>
+                        </div>
+                        <select
+                          value={mapping[unit.id] || ''}
+                          onChange={(e) => setMapping((m) => ({ ...m, [unit.id]: e.target.value }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
+                        >
+                          <option value="">— No vincular —</option>
+                          {trucks.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              Unidad {t.numero_unidad} — {t.marca} {t.modelo}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-end gap-3 mt-5 pt-4 border-t">
+                    <button
+                      onClick={() => setShowSyncModal(false)}
+                      className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleApplySync}
+                      disabled={Object.values(mapping).every((v) => !v)}
+                      className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                    >
+                      Aplicar Kilómetros
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
