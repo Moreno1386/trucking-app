@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Users, Plus, Search, Edit, Trash2, X, AlertTriangle, Phone, Eye } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
+import useAuthStore from '../store/useAuthStore';
 import { statusClass, statusLabel, formatDate, getDaysRemaining, daysRemainingClass } from '../utils/helpers';
+import { logActivity } from '../utils/logActivity';
 
 const emptyForm = {
   numero_empleado: '',
@@ -104,6 +106,7 @@ function DriverCard({ driver, onEdit, onDelete, onView }) {
 
 export default function Drivers() {
   const { drivers, addDriver, updateDriver, deleteDriver } = useFleetStore();
+  const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('Todos');
   const [showModal, setShowModal] = useState(false);
@@ -136,6 +139,7 @@ export default function Drivers() {
   const handleDelete = (d) => {
     if (window.confirm(`¿Eliminar a ${d.nombre} ${d.apellido_paterno}?`)) {
       deleteDriver(d.id);
+      logActivity(user, 'Eliminó conductor', `${d.nombre} ${d.apellido_paterno} (${d.numero_empleado})`);
     }
   };
   const handleChange = (e) => {
@@ -154,8 +158,10 @@ export default function Drivers() {
     const data = sanitize(form);
     if (editItem) {
       updateDriver(editItem.id, data);
+      logActivity(user, 'Editó conductor', `${data.nombre} ${data.apellido_paterno} (${data.numero_empleado})`);
     } else {
       addDriver(data);
+      logActivity(user, 'Agregó conductor', `${data.nombre} ${data.apellido_paterno} (${data.numero_empleado})`);
     }
     setShowModal(false);
     setEditItem(null);

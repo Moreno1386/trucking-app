@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { logActivity } from '../utils/logActivity';
 
 const useAuthStore = create(
   persist(
@@ -16,6 +17,7 @@ const useAuthStore = create(
             nombre: email.split('@')[0],
           };
           set({ user, isAuthenticated: true });
+          logActivity(user, 'Inició sesión', '');
           return true;
         }
         return false;

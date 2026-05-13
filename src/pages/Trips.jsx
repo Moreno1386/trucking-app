@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Route, Plus, Search, Edit, Trash2, X, MapPin, Calendar, Eye } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
+import useAuthStore from '../store/useAuthStore';
 import { statusClass, statusLabel, formatDate, formatCurrency } from '../utils/helpers';
+import { logActivity } from '../utils/logActivity';
 
 const emptyForm = {
   numero_viaje: '',
@@ -25,6 +27,7 @@ const STATUS_FILTERS = ['Todos', 'pendiente', 'en_curso', 'completado', 'cancela
 
 export default function Trips() {
   const { trips, trucks, drivers, addTrip, updateTrip, deleteTrip } = useFleetStore();
+  const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('Todos');
   const [showModal, setShowModal] = useState(false);
@@ -58,7 +61,10 @@ export default function Trips() {
     setShowModal(true);
   };
   const handleDelete = (t) => {
-    if (window.confirm(`¿Eliminar viaje ${t.numero_viaje}?`)) deleteTrip(t.id);
+    if (window.confirm(`¿Eliminar viaje ${t.numero_viaje}?`)) {
+      deleteTrip(t.id);
+      logActivity(user, 'Eliminó viaje', `${t.numero_viaje} — ${t.origen || ''} → ${t.destino || ''}`);
+    }
   };
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -73,8 +79,10 @@ export default function Trips() {
     };
     if (editItem) {
       updateTrip(editItem.id, data);
+      logActivity(user, 'Editó viaje', `${data.numero_viaje} — ${data.origen || ''} → ${data.destino || ''}`);
     } else {
       addTrip(data);
+      logActivity(user, 'Agregó viaje', `${data.numero_viaje} — ${data.origen || ''} → ${data.destino || ''}`);
     }
     setShowModal(false);
     setEditItem(null);

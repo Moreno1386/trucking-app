@@ -1,7 +1,9 @@
-import { Truck, Users, Route, Bell, AlertTriangle, CheckCircle, ChevronRight, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Truck, Users, Route, Bell, AlertTriangle, CheckCircle, ChevronRight, Plus, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useFleetStore from '../store/useFleetStore';
 import { statusClass, statusLabel, formatNumber, getOilStatus } from '../utils/helpers';
+import { supabase } from '../lib/supabase';
 
 function KpiCard({ icon: Icon, label, value, color }) {
   return (
@@ -17,10 +19,51 @@ function KpiCard({ icon: Icon, label, value, color }) {
   );
 }
 
+const ACTION_ICON = {
+  'Inició sesión':     '🟢',
+  'Agregó viaje':      '📦',
+  'Editó viaje':       '✏️',
+  'Eliminó viaje':     '🗑️',
+  'Registró gasto':    '💰',
+  'Editó gasto':       '✏️',
+  'Eliminó gasto':     '🗑️',
+  'Agregó conductor':  '👤',
+  'Editó conductor':   '✏️',
+  'Eliminó conductor': '🗑️',
+}
+
+function timeAgo(dateStr) {
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000)
+  if (diff < 60) return 'hace un momento'
+  if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`
+  if (diff < 86400) return `hace ${Math.floor(diff / 3600)} h`
+  return `hace ${Math.floor(diff / 86400)} días`
+}
+
 export default function Dashboard() {
   const { trucks, drivers } = useFleetStore();
   const getAlerts = useFleetStore((s) => s.getAlerts);
   const navigate = useNavigate();
+  const [activityLog, setActivityLog] = useState([]);
+
+  useEffect(() => {
+    async function fetchLog() {
+      const { data } = await supabase
+        .from('activity_log')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      if (data) setActivityLog(data)
+    }
+    fetchLog()
+    const channel = supabase
+      .channel('activity_log_changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity_log' }, (payload) => {
+        setActivityLog((prev) => [payload.new, ...prev].slice(0, 20))
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [])
 
   const stats = {
     totalCamiones: trucks.length,
@@ -172,6 +215,34 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Activity Timeline */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-blue-600" />
+          <h2 className="font-semibold text-gray-900">Actividad Reciente</h2>
+        </div>
+        <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
+          {activityLog.length === 0 && (
+            <div className="text-center py-10 text-gray-400 text-sm">Sin actividad registrada</div>
+          )}
+          {activityLog.map((entry) => (
+            <div key={entry.id} className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50">
+              <span className="text-lg leading-none mt-0.5">{ACTION_ICON[entry.action] || '🔵'}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900">{entry.user_name}</span>
+                  <span className="text-sm text-gray-600">{entry.action}</span>
+                </div>
+                {entry.detail && (
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">{entry.detail}</p>
+                )}
+              </div>
+              <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{timeAgo(entry.created_at)}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

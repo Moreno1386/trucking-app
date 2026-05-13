@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { TrendingDown, Plus, Edit, Trash2, X, Eye } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
+import useAuthStore from '../store/useAuthStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
+import { logActivity } from '../utils/logActivity';
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent';
 
@@ -18,6 +20,7 @@ function parseMonto(val) {
 
 export default function GastosPage() {
   const { gastos, addGasto, updateGasto, deleteGasto } = useFleetStore();
+  const user = useAuthStore((s) => s.user);
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
@@ -28,7 +31,10 @@ export default function GastosPage() {
   const openAdd = () => { setEditItem(null); setForm(emptyForm); setShowModal(true); };
   const openEdit = (g) => { setEditItem(g); setForm({ ...g }); setShowModal(true); };
   const handleDelete = (g) => {
-    if (window.confirm(`¿Eliminar gasto "${g.concepto}"?`)) deleteGasto(g.id);
+    if (window.confirm(`¿Eliminar gasto "${g.concepto}"?`)) {
+      deleteGasto(g.id);
+      logActivity(user, 'Eliminó gasto', `${g.concepto} — ${formatCurrency(g.cantidad)}`);
+    }
   };
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -37,8 +43,13 @@ export default function GastosPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const data = { ...form, cantidad: parseMonto(form.cantidad) };
-    if (editItem) updateGasto(editItem.id, data);
-    else addGasto(data);
+    if (editItem) {
+      updateGasto(editItem.id, data);
+      logActivity(user, 'Editó gasto', `${data.concepto} — ${formatCurrency(data.cantidad)}`);
+    } else {
+      addGasto(data);
+      logActivity(user, 'Registró gasto', `${data.concepto} — ${formatCurrency(data.cantidad)}`);
+    }
     setShowModal(false); setEditItem(null);
   };
 
