@@ -113,7 +113,7 @@ function SeccionUnidades({ trucks, facturas, gastos, maintenance, trips, viajesA
   const viajesPorUnidad = useMemo(() => {
     const map = {};
     viajesAdmin.forEach((v) => {
-      const u = v.unidad || '—';
+      const u = (v.unidad || '—').trim().toUpperCase();
       if (!map[u]) map[u] = { unidad: u, nombre: u, ingresos: 0, gastos: 0, combustible: 0, rentabilidad: 0, truck: null };
       map[u].ingresos += parseMoney(v.costo_servicio);
       map[u].combustible += parseMoney(v.diesel);
