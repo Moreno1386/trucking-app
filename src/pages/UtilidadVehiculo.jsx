@@ -29,12 +29,11 @@ export default function UtilidadVehiculo() {
 
   const resumen = trucks.map((truck) => {
     const viajesCamion = trips.filter((t) => t.camion_id === truck.id);
-    const totalIngresos = viajesCamion.reduce((sum, t) => sum + parseMonto(t.costo), 0);
     const registrosAdmin = registrosDeTruck(viajesAdmin, truck);
     const costoServicio = registrosAdmin.reduce((sum, v) => sum + parseMonto(v.costo_servicio), 0);
     const totalGastos = registrosAdmin.reduce((sum, v) => sum + calcGastos(v), 0);
     const utilidad = registrosAdmin.reduce((sum, v) => sum + calcUtilidad(v), 0);
-    return { truck, totalIngresos, costoServicio, totalGastos, utilidad, count: viajesCamion.length };
+    return { truck, costoServicio, totalGastos, utilidad, count: registrosAdmin.length, tripsCount: viajesCamion.length };
   });
 
   const viajesFiltrados = selectedTruck
@@ -48,12 +47,11 @@ export default function UtilidadVehiculo() {
   const totales = resumen.reduce(
     (acc, r) => ({
       count: acc.count + r.count,
-      totalIngresos: acc.totalIngresos + r.totalIngresos,
       costoServicio: acc.costoServicio + r.costoServicio,
       totalGastos: acc.totalGastos + r.totalGastos,
       utilidad: acc.utilidad + r.utilidad,
     }),
-    { count: 0, totalIngresos: 0, costoServicio: 0, totalGastos: 0, utilidad: 0 }
+    { count: 0, costoServicio: 0, totalGastos: 0, utilidad: 0 }
   );
 
   return (
@@ -76,7 +74,6 @@ export default function UtilidadVehiculo() {
                 <th className="px-5 py-3 text-left">Unidad</th>
                 <th className="px-5 py-3 text-left">Vehículo</th>
                 <th className="px-5 py-3 text-center">Viajes</th>
-                <th className="px-5 py-3 text-right">Total Ingresos</th>
                 <th className="px-5 py-3 text-right">Costo Serv.</th>
                 <th className="px-5 py-3 text-right">Total Gastos</th>
                 <th className="px-5 py-3 text-right">Utilidad</th>
@@ -85,12 +82,12 @@ export default function UtilidadVehiculo() {
             <tbody className="divide-y divide-gray-100">
               {resumen.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={6} className="px-5 py-8 text-center text-gray-400">
                     No hay vehículos registrados
                   </td>
                 </tr>
               ) : (
-                resumen.map(({ truck, totalIngresos, costoServicio, totalGastos, utilidad, count }) => (
+                resumen.map(({ truck, costoServicio, totalGastos, utilidad, count }) => (
                   <tr key={truck.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3 font-semibold text-gray-900">
                       Unidad {truck.numero_unidad}
@@ -99,9 +96,6 @@ export default function UtilidadVehiculo() {
                       {truck.marca} {truck.modelo} ({truck.anio})
                     </td>
                     <td className="px-5 py-3 text-center text-gray-600">{count}</td>
-                    <td className="px-5 py-3 text-right font-semibold text-green-700">
-                      {formatCurrency(totalIngresos)}
-                    </td>
                     <td className="px-5 py-3 text-right text-gray-700">
                       {formatCurrency(costoServicio)}
                     </td>
@@ -120,7 +114,6 @@ export default function UtilidadVehiculo() {
                 <tr>
                   <td colSpan={2} className="px-5 py-3 font-bold text-gray-800">Total General</td>
                   <td className="px-5 py-3 text-center font-bold text-gray-800">{totales.count}</td>
-                  <td className="px-5 py-3 text-right font-bold text-green-700">{formatCurrency(totales.totalIngresos)}</td>
                   <td className="px-5 py-3 text-right font-bold text-gray-800">{formatCurrency(totales.costoServicio)}</td>
                   <td className="px-5 py-3 text-right font-bold text-red-600">{formatCurrency(totales.totalGastos)}</td>
                   <td className={`px-5 py-3 text-right font-bold text-base ${totales.utilidad >= 0 ? 'text-green-700' : 'text-red-600'}`}>
