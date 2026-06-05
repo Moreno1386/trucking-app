@@ -9,7 +9,7 @@ import useAuthStore from '../store/useAuthStore';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/fleet', icon: Truck, label: 'Vehículos' },
+  { to: '/fleet', icon: Truck, label: 'Cambio de Aceite' },
   { to: '/drivers', icon: Users, label: 'Licencias' },
   { to: '/admin', icon: Briefcase, label: 'Administrativo' },
   { to: '/maintenance', icon: Wrench, label: 'Mantenimiento' },
