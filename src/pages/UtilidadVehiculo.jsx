@@ -3,22 +3,45 @@ import { TrendingUp } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
-export default function UtilidadVehiculo() {
-  const { trucks, trips } = useFleetStore();
-  const [selectedTruck, setSelectedTruck] = useState('');
+const parseMonto = (v) => parseFloat(v) || 0;
 
-  // Resumen por vehículo: total de costo y número de viajes
-  const resumen = trucks.map((truck) => {
-    const viajesCamion = trips.filter((t) => t.camion_id === truck.id);
-    const total = viajesCamion.reduce((sum, t) => sum + (parseFloat(t.costo) || 0), 0);
-    return { truck, total, count: viajesCamion.length };
+// Suma todos los gastos de un registro de viajesAdmin
+const calcGastos = (v) =>
+  parseMonto(v.diesel) +
+  parseMonto(v.casetas_efectivo) +
+  parseMonto(v.casetas_televia) +
+  parseMonto(v.otros_gastos) +
+  parseMonto(v.pago_operador);
+
+// Busca los registros de viajesAdmin que pertenecen a un camión
+// cruzando por numero_unidad o placa (insensible a mayúsculas)
+const gastosDeTruck = (viajesAdmin, truck) =>
+  viajesAdmin.filter((v) => {
+    const u = (v.unidad || '').trim().toLowerCase();
+    return (
+      u === (truck.numero_unidad || '').trim().toLowerCase() ||
+      u === (truck.placa || '').trim().toLowerCase()
+    );
   });
 
-  // Viajes del vehículo seleccionado
+export default function UtilidadVehiculo() {
+  const { trucks, trips, viajesAdmin } = useFleetStore();
+  const [selectedTruck, setSelectedTruck] = useState('');
+
+  // Resumen por vehículo
+  const resumen = trucks.map((truck) => {
+    const viajesCamion = trips.filter((t) => t.camion_id === truck.id);
+    const totalIngresos = viajesCamion.reduce((sum, t) => sum + parseMonto(t.costo), 0);
+    const registrosAdmin = gastosDeTruck(viajesAdmin, truck);
+    const totalGastos = registrosAdmin.reduce((sum, v) => sum + calcGastos(v), 0);
+    return { truck, totalIngresos, totalGastos, count: viajesCamion.length };
+  });
+
+  // Detalle del vehículo seleccionado
   const viajesFiltrados = selectedTruck
     ? trips.filter((t) => t.camion_id === selectedTruck)
     : [];
-  const totalFiltrado = viajesFiltrados.reduce((sum, t) => sum + (parseFloat(t.costo) || 0), 0);
+  const totalFiltrado = viajesFiltrados.reduce((sum, t) => sum + parseMonto(t.costo), 0);
   const truckSeleccionado = trucks.find((t) => t.id === selectedTruck);
 
   const truckLabel = (t) => `Unidad ${t.numero_unidad} — ${t.marca} ${t.modelo} (${t.anio})`;
@@ -28,7 +51,7 @@ export default function UtilidadVehiculo() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Utilidad por Vehículo</h1>
-        <p className="text-gray-500 text-sm">Suma de ingresos por viaje agrupados por unidad</p>
+        <p className="text-gray-500 text-sm">Ingresos y gastos agrupados por unidad</p>
       </div>
 
       {/* Tabla resumen todos los vehículos */}
@@ -45,17 +68,18 @@ export default function UtilidadVehiculo() {
                 <th className="px-5 py-3 text-left">Vehículo</th>
                 <th className="px-5 py-3 text-center">Viajes</th>
                 <th className="px-5 py-3 text-right">Total Ingresos</th>
+                <th className="px-5 py-3 text-right">Total Gastos</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {resumen.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
                     No hay vehículos registrados
                   </td>
                 </tr>
               ) : (
-                resumen.map(({ truck, total, count }) => (
+                resumen.map(({ truck, totalIngresos, totalGastos, count }) => (
                   <tr key={truck.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3 font-semibold text-gray-900">
                       Unidad {truck.numero_unidad}
@@ -65,7 +89,10 @@ export default function UtilidadVehiculo() {
                     </td>
                     <td className="px-5 py-3 text-center text-gray-600">{count}</td>
                     <td className="px-5 py-3 text-right font-semibold text-green-700">
-                      {formatCurrency(total)}
+                      {formatCurrency(totalIngresos)}
+                    </td>
+                    <td className="px-5 py-3 text-right font-semibold text-red-600">
+                      {formatCurrency(totalGastos)}
                     </td>
                   </tr>
                 ))
@@ -81,7 +108,10 @@ export default function UtilidadVehiculo() {
                     {resumen.reduce((s, r) => s + r.count, 0)}
                   </td>
                   <td className="px-5 py-3 text-right font-bold text-green-700 text-base">
-                    {formatCurrency(resumen.reduce((s, r) => s + r.total, 0))}
+                    {formatCurrency(resumen.reduce((s, r) => s + r.totalIngresos, 0))}
+                  </td>
+                  <td className="px-5 py-3 text-right font-bold text-red-600 text-base">
+                    {formatCurrency(resumen.reduce((s, r) => s + r.totalGastos, 0))}
                   </td>
                 </tr>
               </tfoot>
@@ -159,7 +189,7 @@ export default function UtilidadVehiculo() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-green-700">
-                          {formatCurrency(parseFloat(v.costo) || 0)}
+                          {formatCurrency(parseMonto(v.costo))}
                         </td>
                       </tr>
                     ))}
@@ -167,7 +197,7 @@ export default function UtilidadVehiculo() {
                   <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                     <tr>
                       <td colSpan={5} className="px-4 py-3 font-bold text-gray-800">
-                        Total
+                        Total Ingresos
                       </td>
                       <td className="px-4 py-3 text-right font-bold text-green-700 text-base">
                         {formatCurrency(totalFiltrado)}
