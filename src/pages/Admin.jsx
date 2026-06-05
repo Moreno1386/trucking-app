@@ -55,7 +55,7 @@ function ViajesAdmin() {
     [viajesAdmin]
   );
   const unidades = useMemo(() =>
-    [...new Set(viajesAdmin.map((v) => v.unidad).filter(Boolean))].sort(),
+    [...new Set(viajesAdmin.map((v) => (v.unidad || '').trim().toUpperCase()).filter(Boolean))].sort(),
     [viajesAdmin]
   );
 
@@ -69,7 +69,7 @@ function ViajesAdmin() {
         (v.unidad || '').toLowerCase().includes(q)
       );
       const matchOperador = !filtroOperador || v.operador === filtroOperador;
-      const matchUnidad = !filtroUnidad || v.unidad === filtroUnidad;
+      const matchUnidad = !filtroUnidad || (v.unidad || '').trim().toUpperCase() === filtroUnidad;
       const matchDesde = !filtroDesde || v.fecha >= filtroDesde;
       const matchHasta = !filtroHasta || v.fecha <= filtroHasta;
       return matchBusqueda && matchOperador && matchUnidad && matchDesde && matchHasta;
