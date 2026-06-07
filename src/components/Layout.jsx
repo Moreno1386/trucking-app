@@ -13,10 +13,10 @@ const navItems = [
   { to: '/drivers', icon: Users, label: 'Licencias' },
   { to: '/admin', icon: Briefcase, label: 'Administrativo' },
   { to: '/maintenance', icon: Wrench, label: 'Mantenimiento' },
-  { to: '/insurance', icon: FileText, label: 'Seguros' },
+  { to: '/insurance', icon: FileText, label: 'Póliza de Seguros' },
   { to: '/credit-cards', icon: CreditCard, label: 'Tarjetas de Crédito' },
   { to: '/contabilidad', icon: BookOpen, label: 'Contabilidad' },
-  { to: '/reports', icon: BarChart2, label: 'Reportes' },
+  { to: '/reports', icon: BarChart2, label: 'Gráficas' },
   { to: '/utilidad-vehiculo', icon: TrendingUp, label: 'Utilidad por Vehículo' },
 ];
 
