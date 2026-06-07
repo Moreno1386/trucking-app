@@ -513,91 +513,169 @@ function SeccionViajes({ trips, trucks, drivers, maintenance, viajesAdmin }) {
   );
 }
 
+// Colores para las líneas por vehículo
+const VEHICLE_COLORS = ['#16a34a','#dc2626','#2563eb','#d97706','#7c3aed','#0891b2','#db2777','#65a30d','#ea580c','#6366f1'];
+
 // ── SECCIÓN 3: Gráficas Mensuales ────────────────────────────────
-function SeccionGraficas({ facturas, gastos, maintenance, trips, viajesAdmin, trucks, insurances }) {
+function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances }) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
-
   const years = Array.from({ length: 4 }, (_, i) => currentYear - i);
 
-  // Prima mensual total de todas las pólizas activas (prima_anual / 12 por vehículo)
-  const primasMensuales = useMemo(() => {
-    return insurances
-      .filter((i) => i.estado === 'activo')
-      .reduce((sum, i) => sum + (parseFloat(i.prima_anual) || 0) / 12, 0);
-  }, [insurances]);
-
-  const monthlyData = useMemo(() => {
-    const byMonth = Array.from({ length: 12 }, (_, i) => ({
-      mes: MONTHS[i],
-      facturacion: 0,
-      combustible: 0,
-      mantenimiento: 0,
-      seguros: 0,
-      otros: 0,
-    }));
-
-    facturas.forEach((f) => {
-      if (!f.fecha) return;
-      const d = new Date(f.fecha + 'T12:00:00');
-      if (d.getFullYear() !== year) return;
-      byMonth[d.getMonth()].facturacion += parseMoney(f.monto);
+  // Prima mensual por camión (placa → prima/12)
+  const primaMensualPorPlaca = useMemo(() => {
+    const map = {};
+    insurances.filter((i) => i.estado === 'activo').forEach((ins) => {
+      const truck = trucks.find((t) => t.id === ins.camion_id);
+      if (!truck || !truck.placa) return;
+      const placa = truck.placa.trim().toUpperCase();
+      map[placa] = (map[placa] || 0) + (parseFloat(ins.prima_anual) || 0) / 12;
     });
+    return map;
+  }, [insurances, trucks]);
 
-    trips.forEach((t) => {
-      const fecha = t.fecha_salida || t.fecha;
-      if (!fecha) return;
-      const d = new Date(fecha + 'T12:00:00');
-      if (d.getFullYear() !== year) return;
-      byMonth[d.getMonth()].facturacion += parseMoney(t.costo_flete ?? t.costo);
-      byMonth[d.getMonth()].combustible += parseMoney(t.combustible_costo);
-    });
-
+  // Gasto de mantenimiento por placa y mes
+  const mantPorPlacaMes = useMemo(() => {
+    const map = {};
     maintenance.forEach((m) => {
       if (!m.fecha) return;
       const d = new Date(m.fecha + 'T12:00:00');
       if (d.getFullYear() !== year) return;
-      byMonth[d.getMonth()].mantenimiento += parseMoney(m.costo);
+      const truck = trucks.find((t) => t.id === m.camion_id);
+      if (!truck || !truck.placa) return;
+      const placa = truck.placa.trim().toUpperCase();
+      const mes = d.getMonth();
+      const key = `${placa}__${mes}`;
+      map[key] = (map[key] || 0) + (parseFloat(m.costo) || 0);
     });
+    return map;
+  }, [maintenance, trucks, year]);
 
-    gastos.forEach((g) => {
-      if (!g.fecha) return;
-      const d = new Date(g.fecha + 'T12:00:00');
-      if (d.getFullYear() !== year) return;
-      byMonth[d.getMonth()].otros += parseMoney(g.monto ?? g.cantidad);
-    });
-
-    // ── Datos de Registro de Viajes (Admin) ──
+  // Utilidad neta por placa y mes (misma lógica que UtilidadVehiculo)
+  const { placas, porPlacaMes } = useMemo(() => {
+    const data = {}; // data[placa][mes] = utilidadNeta
     viajesAdmin.forEach((v) => {
       if (!v.fecha) return;
       const d = new Date(v.fecha + 'T12:00:00');
       if (d.getFullYear() !== year) return;
-      byMonth[d.getMonth()].facturacion += parseMoney(v.costo_servicio);
-      byMonth[d.getMonth()].combustible += parseMoney(v.diesel);
-      byMonth[d.getMonth()].otros +=
-        parseMoney(v.casetas_efectivo) +
-        parseMoney(v.casetas_televia) +
-        parseMoney(v.otros_gastos) +
+      const placa = (v.unidad || '').trim().toUpperCase();
+      if (!placa) return;
+      const mes = d.getMonth();
+      if (!data[placa]) data[placa] = Array(12).fill(0);
+      const utilViaje =
+        parseMoney(v.costo_servicio) -
+        parseMoney(v.diesel) -
+        parseMoney(v.casetas_efectivo) -
+        parseMoney(v.casetas_televia) -
+        parseMoney(v.otros_gastos) -
         parseMoney(v.pago_operador);
+      data[placa][mes] += utilViaje;
     });
 
-    // ── Pólizas de seguro: prima mensual fija por cada mes del año seleccionado ──
-    byMonth.forEach((m) => {
-      m.seguros = primasMensuales;
+    // Descontar prima mensual y mantenimiento
+    Object.keys(data).forEach((placa) => {
+      const prima = primaMensualPorPlaca[placa] || 0;
+      for (let m = 0; m < 12; m++) {
+        const mant = mantPorPlacaMes[`${placa}__${m}`] || 0;
+        data[placa][m] -= prima + mant;
+      }
     });
 
-    return byMonth.map((m) => ({
-      ...m,
-      balance: m.facturacion - m.combustible - m.mantenimiento - m.seguros - m.otros,
-    }));
-  }, [facturas, gastos, maintenance, trips, viajesAdmin, year, primasMensuales]);
+    return { placas: Object.keys(data).sort(), porPlacaMes: data };
+  }, [viajesAdmin, year, primaMensualPorPlaca, mantPorPlacaMes]);
 
-  const hasData = monthlyData.some((m) => m.facturacion > 0 || m.mantenimiento > 0);
-  const display = hasData ? monthlyData : buildDemoMonthly(year);
+  // Datos para gráfica 1: todos los vehículos por mes
+  const allVehiclesData = useMemo(() =>
+    MONTHS.map((mes, i) => {
+      const row = { mes };
+      placas.forEach((p) => { row[p] = Math.round(porPlacaMes[p][i]); });
+      return row;
+    }), [placas, porPlacaMes]);
+
+  if (placas.length === 0) {
+    return (
+      <div className="space-y-4" id="section-charts">
+        <p className="text-sm text-gray-400 italic">No hay viajes registrados para {year}.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8" id="section-charts">
-      <p className="text-sm text-gray-400 italic">Próximamente — gráficas en construcción.</p>
+      {/* Selector de año */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-600 font-medium">Año:</span>
+        <div className="flex gap-1.5">
+          {years.map((y) => (
+            <button key={y} onClick={() => setYear(y)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${year === y ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              {y}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Gráfica 1: Todos los vehículos por mes */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <h4 className="text-sm font-semibold text-gray-700 mb-4">Todos los Vehículos — Utilidad Neta por Mes {year}</h4>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={allVehiclesData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#6b7280' }} />
+              <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              {placas.map((placa, i) => (
+                <Line
+                  key={placa}
+                  type="monotone"
+                  dataKey={placa}
+                  name={placa}
+                  stroke={VEHICLE_COLORS[i % VEHICLE_COLORS.length]}
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Gráfica 2: Por vehículo y por mes */}
+      <div className="space-y-5">
+        <h4 className="text-sm font-semibold text-gray-700">Por Vehículo y por Mes — {year}</h4>
+        {placas.map((placa, i) => {
+          const color = VEHICLE_COLORS[i % VEHICLE_COLORS.length];
+          const totalAnual = porPlacaMes[placa].reduce((s, v) => s + v, 0);
+          const barData = MONTHS.map((mes, mi) => ({ mes, utilidad: Math.round(porPlacaMes[placa][mi]) }));
+          return (
+            <div key={placa} className="bg-white rounded-xl border border-gray-100 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h5 className="font-semibold text-gray-800 font-mono">{placa}</h5>
+                <div className="text-right">
+                  <div className="text-xs text-gray-400">Total anual</div>
+                  <div className={`font-bold text-sm ${totalAnual >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    {formatCurrency(totalAnual)}
+                  </div>
+                </div>
+              </div>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                    <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="utilidad" name="Utilidad Neta" fill={color} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
