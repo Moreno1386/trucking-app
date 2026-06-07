@@ -625,30 +625,32 @@ function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances }) {
         </div>
       </div>
 
-      {/* Gráfica 1: Barras horizontales — meses en Y, vehículos agrupados */}
+      {/* Gráfica 1: Barras verticales — meses en X, vehículos agrupados */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h4 className="text-sm font-semibold text-gray-700 mb-4">Todos los Vehículos — Utilidad Neta por Mes {year}</h4>
-        <div style={{ height: MONTHS.length * 48 + 60 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              layout="vertical"
-              data={MONTHS.map((mes, mi) => {
-                const row = { mes };
-                placas.forEach((p) => { row[p] = Math.round(porPlacaMes[p][mi]); });
-                return row;
-              })}
-              margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-              <YAxis type="category" dataKey="mes" tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }} width={35} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-              {placas.map((placa, i) => (
-                <Bar key={placa} dataKey={placa} name={placa} fill={VEHICLE_COLORS[i % VEHICLE_COLORS.length]} radius={[0, 2, 2, 0]} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="overflow-x-auto">
+          <div style={{ minWidth: Math.max(900, placas.length * MONTHS.length * 4) }}>
+            <ResponsiveContainer width="100%" height={420}>
+              <BarChart
+                data={MONTHS.map((mes, mi) => {
+                  const row = { mes };
+                  placas.forEach((p) => { row[p] = Math.round(porPlacaMes[p][mi]); });
+                  return row;
+                })}
+                margin={{ top: 10, right: 20, left: 20, bottom: 10 }}
+                barCategoryGap="20%"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="mes" tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
+                <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                {placas.map((placa, i) => (
+                  <Bar key={placa} dataKey={placa} name={placa} fill={VEHICLE_COLORS[i % VEHICLE_COLORS.length]} radius={[3, 3, 0, 0]} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
