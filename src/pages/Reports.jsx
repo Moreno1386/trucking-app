@@ -625,33 +625,30 @@ function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances }) {
         </div>
       </div>
 
-      {/* Gráfica 1: Todos los vehículos — barras agrupadas por mes */}
+      {/* Gráfica 1: Barras horizontales — meses en Y, vehículos agrupados */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">
         <h4 className="text-sm font-semibold text-gray-700 mb-4">Todos los Vehículos — Utilidad Neta por Mes {year}</h4>
-        <div className="h-72 overflow-x-auto">
-          <div style={{ minWidth: placas.length * 60 + 80 }}>
-            <ResponsiveContainer width="100%" height={288}>
-              <BarChart
-                data={placas.map((placa, i) => {
-                  const row = { placa };
-                  MONTHS.forEach((mes, mi) => {
-                    row[mes] = Math.round(porPlacaMes[placa][mi]);
-                  });
-                  return row;
-                })}
-                margin={{ top: 5, right: 20, left: 10, bottom: 40 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="placa" tick={{ fontSize: 10, fill: '#374151' }} angle={-35} textAnchor="end" interval={0} />
-                <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                {MONTHS.map((mes, mi) => (
-                  <Bar key={mes} dataKey={mes} name={mes} fill={VEHICLE_COLORS[mi % VEHICLE_COLORS.length]} radius={[2, 2, 0, 0]} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        <div style={{ height: MONTHS.length * 48 + 60 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              layout="vertical"
+              data={MONTHS.map((mes, mi) => {
+                const row = { mes };
+                placas.forEach((p) => { row[p] = Math.round(porPlacaMes[p][mi]); });
+                return row;
+              })}
+              margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+              <YAxis type="category" dataKey="mes" tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }} width={35} />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+              {placas.map((placa, i) => (
+                <Bar key={placa} dataKey={placa} name={placa} fill={VEHICLE_COLORS[i % VEHICLE_COLORS.length]} radius={[0, 2, 2, 0]} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
