@@ -995,14 +995,12 @@ function SeccionExportar({ trucks, facturas, gastos, maintenance, trips, viajesA
 
 // ── Componente principal ──────────────────────────────────────────
 const TABS = [
-  { id: 'units', label: 'Ingresos vs Gastos por Unidad', short: 'Por Unidad' },
-  { id: 'trips', label: 'Rentabilidad por Viaje', short: 'Por Viaje' },
   { id: 'charts', label: 'Gráficas Mensuales', short: 'Gráficas' },
   { id: 'export', label: 'Exportar Reportes', short: 'Exportar' },
 ];
 
 export default function Reports() {
-  const [activeTab, setActiveTab] = useState('units');
+  const [activeTab, setActiveTab] = useState('charts');
   const { trucks, drivers, trips, maintenance, facturas, gastos, viajesAdmin, insurances } = useFleetStore();
   const chartsRef = useRef(null);
 
@@ -1082,17 +1080,6 @@ export default function Reports() {
 
         {/* Tab content */}
         <div className="p-6">
-          {activeTab === 'units' && (
-            <SeccionUnidades
-              trucks={trucks} facturas={facturas} gastos={gastos}
-              maintenance={maintenance} trips={trips} viajesAdmin={viajesAdmin}
-            />
-          )}
-          {activeTab === 'trips' && (
-            <SeccionViajes
-              trips={trips} trucks={trucks} drivers={drivers} maintenance={maintenance} viajesAdmin={viajesAdmin}
-            />
-          )}
           {activeTab === 'charts' && (
             <div ref={chartsRef}>
               <SeccionGraficas
