@@ -597,77 +597,7 @@ function SeccionGraficas({ facturas, gastos, maintenance, trips, viajesAdmin, tr
 
   return (
     <div className="space-y-8" id="section-charts">
-      {/* Selector de año */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-600 font-medium">Año:</span>
-        <div className="flex gap-1.5">
-          {years.map((y) => (
-            <button key={y} onClick={() => setYear(y)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${year === y ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              {y}
-            </button>
-          ))}
-        </div>
-        {!hasData && <span className="text-xs text-amber-600 italic">(datos de ejemplo)</span>}
-      </div>
-
-      {/* Gráfica 1: Facturación mensual */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h4 className="text-sm font-semibold text-gray-700 mb-4">Facturación Mensual — {year}</h4>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={display} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#6b7280' }} />
-              <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="facturacion" name="Facturación" stroke="#16a34a" strokeWidth={2.5} dot={{ r: 3, fill: '#16a34a' }} activeDot={{ r: 5 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Gráfica 2: Gastos por categoría */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h4 className="text-sm font-semibold text-gray-700 mb-4">Gastos por Categoría — {year}</h4>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={display} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#6b7280' }} />
-              <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="combustible" name="Combustible" stackId="a" fill="#ea580c" />
-              <Bar dataKey="mantenimiento" name="Mantenimiento" stackId="a" fill="#dc2626" />
-              <Bar dataKey="seguros" name="Seguros" stackId="a" fill="#7c3aed" />
-              <Bar dataKey="otros" name="Otros gastos" stackId="a" fill="#b91c1c" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Gráfica 3: Balance mensual */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h4 className="text-sm font-semibold text-gray-700 mb-4">Balance Mensual (Ingresos − Gastos) — {year}</h4>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={display} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <defs>
-                <linearGradient id="balanceGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#16a34a" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#16a34a" stopOpacity={0.01} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#6b7280' }} />
-              <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="balance" name="Balance" stroke="#16a34a" strokeWidth={2.5} fill="url(#balanceGrad)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <p className="text-sm text-gray-400 italic">Próximamente — gráficas en construcción.</p>
     </div>
   );
 }
