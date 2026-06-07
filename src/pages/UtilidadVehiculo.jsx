@@ -73,7 +73,7 @@ export default function UtilidadVehiculo() {
 
   const getPrimaAnual = (placa) => {
     const ins = getInsuranceByPlaca(placa);
-    return ins ? (parseFloat(ins.prima_anual) || 0) : 0;
+    return ins ? (parseFloat(ins.prima_anual) || 0) / 12 : 0;
   };
 
   const getGastoMantenimiento = (placa) => {
