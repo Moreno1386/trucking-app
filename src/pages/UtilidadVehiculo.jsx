@@ -15,7 +15,7 @@ const calcGastos = (v) =>
 const calcUtilidad = (v) => parseMonto(v.costo_servicio) - calcGastos(v);
 
 export default function UtilidadVehiculo() {
-  const { viajesAdmin } = useFleetStore();
+  const { viajesAdmin, trucks, insurances } = useFleetStore();
   const [selectedUnidad, setSelectedUnidad] = useState('');
 
   // Agrupar por unidad directamente desde viajesAdmin
@@ -32,9 +32,21 @@ export default function UtilidadVehiculo() {
     unidadesMap[key].utilidad += calcUtilidad(v);
   });
 
+  // Buscar prima anual por placa
+  const getPrimaAnual = (placa) => {
+    const truck = trucks.find((t) => (t.placa || '').trim().toUpperCase() === placa);
+    if (!truck) return 0;
+    const ins = insurances.find((i) => i.camion_id === truck.id && i.estado === 'activo');
+    return ins ? (parseFloat(ins.prima_anual) || 0) : 0;
+  };
+
   const resumen = Object.values(unidadesMap).sort((a, b) =>
     a.unidad.localeCompare(b.unidad)
-  );
+  ).map((r) => ({
+    ...r,
+    primaAnual: getPrimaAnual(r.unidad),
+    utilidadNeta: r.utilidad - getPrimaAnual(r.unidad),
+  }));
 
   const totales = resumen.reduce(
     (acc, r) => ({
@@ -42,8 +54,10 @@ export default function UtilidadVehiculo() {
       costoServicio: acc.costoServicio + r.costoServicio,
       totalGastos: acc.totalGastos + r.totalGastos,
       utilidad: acc.utilidad + r.utilidad,
+      primaAnual: acc.primaAnual + r.primaAnual,
+      utilidadNeta: acc.utilidadNeta + r.utilidadNeta,
     }),
-    { count: 0, costoServicio: 0, totalGastos: 0, utilidad: 0 }
+    { count: 0, costoServicio: 0, totalGastos: 0, utilidad: 0, primaAnual: 0, utilidadNeta: 0 }
   );
 
   const detalle = selectedUnidad ? unidadesMap[selectedUnidad] : null;
@@ -71,12 +85,14 @@ export default function UtilidadVehiculo() {
                 <th className="px-5 py-3 text-right">Costo Serv.</th>
                 <th className="px-5 py-3 text-right">Total Gastos</th>
                 <th className="px-5 py-3 text-right">Utilidad</th>
+                <th className="px-5 py-3 text-right">Póliza de Seguro</th>
+                <th className="px-5 py-3 text-right">Utilidad Neta</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {resumen.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
                     No hay viajes registrados en Administrativo
                   </td>
                 </tr>
@@ -89,6 +105,12 @@ export default function UtilidadVehiculo() {
                     <td className="px-5 py-3 text-right font-semibold text-red-600">{formatCurrency(r.totalGastos)}</td>
                     <td className={`px-5 py-3 text-right font-bold ${r.utilidad >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                       {formatCurrency(r.utilidad)}
+                    </td>
+                    <td className="px-5 py-3 text-right text-red-600 font-semibold">
+                      {r.primaAnual > 0 ? formatCurrency(r.primaAnual) : '—'}
+                    </td>
+                    <td className={`px-5 py-3 text-right font-bold ${r.utilidadNeta >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                      {formatCurrency(r.utilidadNeta)}
                     </td>
                   </tr>
                 ))
@@ -103,6 +125,10 @@ export default function UtilidadVehiculo() {
                   <td className="px-5 py-3 text-right font-bold text-red-600">{formatCurrency(totales.totalGastos)}</td>
                   <td className={`px-5 py-3 text-right font-bold text-base ${totales.utilidad >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                     {formatCurrency(totales.utilidad)}
+                  </td>
+                  <td className="px-5 py-3 text-right font-bold text-red-600">{formatCurrency(totales.primaAnual)}</td>
+                  <td className={`px-5 py-3 text-right font-bold text-base ${totales.utilidadNeta >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    {formatCurrency(totales.utilidadNeta)}
                   </td>
                 </tr>
               </tfoot>
@@ -149,6 +175,18 @@ export default function UtilidadVehiculo() {
                 <div className="text-xs text-gray-500">Utilidad</div>
                 <div className={`font-bold ${detalle.utilidad >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                   {formatCurrency(detalle.utilidad)}
+                </div>
+              </div>
+              {detalle.primaAnual > 0 && (
+                <div className="bg-red-50 rounded-lg px-4 py-2 text-center">
+                  <div className="text-xs text-gray-500">Póliza de Seguro</div>
+                  <div className="font-bold text-red-600">{formatCurrency(detalle.primaAnual)}</div>
+                </div>
+              )}
+              <div className={`rounded-lg px-4 py-2 text-center ${detalle.utilidadNeta >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div className="text-xs text-gray-500">Utilidad Neta</div>
+                <div className={`font-bold ${detalle.utilidadNeta >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                  {formatCurrency(detalle.utilidadNeta)}
                 </div>
               </div>
             </div>
