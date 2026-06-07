@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Plus, Edit, X } from 'lucide-react';
 import useFleetStore from '../store/useFleetStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
@@ -14,9 +14,26 @@ const calcGastos = (v) =>
 
 const calcUtilidad = (v) => parseMonto(v.costo_servicio) - calcGastos(v);
 
+const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent';
+
+const emptyForm = {
+  aseguradora: '',
+  numero_poliza: '',
+  tipo_cobertura: 'Amplia',
+  fecha_inicio: '',
+  fecha_vencimiento: '',
+  prima_anual: '',
+  suma_asegurada: '',
+  estado: 'activo',
+  notas: '',
+};
+
 export default function UtilidadVehiculo() {
-  const { viajesAdmin, trucks, insurances } = useFleetStore();
+  const { viajesAdmin, trucks, insurances, addInsurance, updateInsurance } = useFleetStore();
   const [selectedUnidad, setSelectedUnidad] = useState('');
+  const [modalPlaca, setModalPlaca] = useState(null); // placa del vehículo en edición
+  const [editInsurance, setEditInsurance] = useState(null); // objeto insurance si es edición
+  const [form, setForm] = useState(emptyForm);
 
   // Agrupar por unidad directamente desde viajesAdmin
   const unidadesMap = {};
@@ -32,11 +49,18 @@ export default function UtilidadVehiculo() {
     unidadesMap[key].utilidad += calcUtilidad(v);
   });
 
-  // Buscar prima anual por placa
+  // Buscar truck e insurance por placa
+  const getTruckByPlaca = (placa) =>
+    trucks.find((t) => (t.placa || '').trim().toUpperCase() === placa) || null;
+
+  const getInsuranceByPlaca = (placa) => {
+    const truck = getTruckByPlaca(placa);
+    if (!truck) return null;
+    return insurances.find((i) => i.camion_id === truck.id && i.estado === 'activo') || null;
+  };
+
   const getPrimaAnual = (placa) => {
-    const truck = trucks.find((t) => (t.placa || '').trim().toUpperCase() === placa);
-    if (!truck) return 0;
-    const ins = insurances.find((i) => i.camion_id === truck.id && i.estado === 'activo');
+    const ins = getInsuranceByPlaca(placa);
     return ins ? (parseFloat(ins.prima_anual) || 0) : 0;
   };
 
@@ -60,7 +84,55 @@ export default function UtilidadVehiculo() {
     { count: 0, costoServicio: 0, totalGastos: 0, utilidad: 0, primaAnual: 0, utilidadNeta: 0 }
   );
 
-  const detalle = selectedUnidad ? unidadesMap[selectedUnidad] : null;
+  const detalle = selectedUnidad ? resumen.find((r) => r.unidad === selectedUnidad) : null;
+
+  // Abrir modal para agregar
+  const openAdd = (placa) => {
+    setModalPlaca(placa);
+    setEditInsurance(null);
+    setForm(emptyForm);
+  };
+
+  // Abrir modal para editar
+  const openEdit = (placa) => {
+    const ins = getInsuranceByPlaca(placa);
+    setModalPlaca(placa);
+    setEditInsurance(ins);
+    setForm({
+      aseguradora: ins.aseguradora || '',
+      numero_poliza: ins.numero_poliza || '',
+      tipo_cobertura: ins.tipo_cobertura || 'Amplia',
+      fecha_inicio: ins.fecha_inicio || '',
+      fecha_vencimiento: ins.fecha_vencimiento || '',
+      prima_anual: ins.prima_anual || '',
+      suma_asegurada: ins.suma_asegurada || '',
+      estado: ins.estado || 'activo',
+      notas: ins.notas || '',
+    });
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((p) => ({ ...p, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const truck = getTruckByPlaca(modalPlaca);
+    const data = {
+      ...form,
+      camion_id: truck ? truck.id : '',
+      prima_anual: parseFloat(String(form.prima_anual).replace(/,/g, '')) || 0,
+      suma_asegurada: parseFloat(String(form.suma_asegurada).replace(/,/g, '')) || 0,
+    };
+    if (editInsurance) {
+      updateInsurance(editInsurance.id, data);
+    } else {
+      addInsurance(data);
+    }
+    setModalPlaca(null);
+    setEditInsurance(null);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -85,7 +157,7 @@ export default function UtilidadVehiculo() {
                 <th className="px-5 py-3 text-right">Costo Serv.</th>
                 <th className="px-5 py-3 text-right">Total Gastos</th>
                 <th className="px-5 py-3 text-right">Utilidad</th>
-                <th className="px-5 py-3 text-right">Póliza de Seguro</th>
+                <th className="px-5 py-3 text-center">Póliza de Seguro</th>
                 <th className="px-5 py-3 text-right">Utilidad Neta</th>
               </tr>
             </thead>
@@ -106,8 +178,27 @@ export default function UtilidadVehiculo() {
                     <td className={`px-5 py-3 text-right font-bold ${r.utilidad >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                       {formatCurrency(r.utilidad)}
                     </td>
-                    <td className="px-5 py-3 text-right text-red-600 font-semibold">
-                      {r.primaAnual > 0 ? formatCurrency(r.primaAnual) : '—'}
+                    <td className="px-5 py-3 text-center">
+                      {r.primaAnual > 0 ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="font-semibold text-red-600">{formatCurrency(r.primaAnual)}</span>
+                          <button
+                            onClick={() => openEdit(r.unidad)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Editar póliza"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => openAdd(r.unidad)}
+                          className="flex items-center gap-1 mx-auto text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg px-2 py-1 transition-colors"
+                          title="Agregar póliza"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Agregar
+                        </button>
+                      )}
                     </td>
                     <td className={`px-5 py-3 text-right font-bold ${r.utilidadNeta >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                       {formatCurrency(r.utilidadNeta)}
@@ -126,7 +217,7 @@ export default function UtilidadVehiculo() {
                   <td className={`px-5 py-3 text-right font-bold text-base ${totales.utilidad >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                     {formatCurrency(totales.utilidad)}
                   </td>
-                  <td className="px-5 py-3 text-right font-bold text-red-600">{formatCurrency(totales.primaAnual)}</td>
+                  <td className="px-5 py-3 text-center font-bold text-red-600">{formatCurrency(totales.primaAnual)}</td>
                   <td className={`px-5 py-3 text-right font-bold text-base ${totales.utilidadNeta >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                     {formatCurrency(totales.utilidadNeta)}
                   </td>
@@ -177,12 +268,23 @@ export default function UtilidadVehiculo() {
                   {formatCurrency(detalle.utilidad)}
                 </div>
               </div>
-              {detalle.primaAnual > 0 && (
-                <div className="bg-red-50 rounded-lg px-4 py-2 text-center">
-                  <div className="text-xs text-gray-500">Póliza de Seguro</div>
-                  <div className="font-bold text-red-600">{formatCurrency(detalle.primaAnual)}</div>
+              <div className="bg-red-50 rounded-lg px-4 py-2 text-center">
+                <div className="text-xs text-gray-500">Póliza de Seguro</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-red-600">
+                    {detalle.primaAnual > 0 ? formatCurrency(detalle.primaAnual) : '—'}
+                  </span>
+                  {detalle.primaAnual > 0 ? (
+                    <button onClick={() => openEdit(detalle.unidad)} className="p-0.5 text-blue-600 hover:bg-blue-100 rounded" title="Editar póliza">
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <button onClick={() => openAdd(detalle.unidad)} className="p-0.5 text-blue-600 hover:bg-blue-100 rounded" title="Agregar póliza">
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
               <div className={`rounded-lg px-4 py-2 text-center ${detalle.utilidadNeta >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
                 <div className="text-xs text-gray-500">Utilidad Neta</div>
                 <div className={`font-bold ${detalle.utilidadNeta >= 0 ? 'text-green-700' : 'text-red-600'}`}>
@@ -235,6 +337,74 @@ export default function UtilidadVehiculo() {
           </>
         )}
       </div>
+
+      {/* Modal agregar / editar póliza */}
+      {modalPlaca !== null && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl">
+            <div className="flex items-center justify-between p-5 border-b">
+              <h2 className="text-lg font-bold text-gray-900">
+                {editInsurance ? 'Editar' : 'Agregar'} Póliza — <span className="font-mono text-red-700">{modalPlaca}</span>
+              </h2>
+              <button onClick={() => setModalPlaca(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Aseguradora *</label>
+                  <input name="aseguradora" type="text" value={form.aseguradora} onChange={handleChange} required className={inp} placeholder="Ej. GNP, AXA, Qualitas..." />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Número de Póliza *</label>
+                  <input name="numero_poliza" type="text" value={form.numero_poliza} onChange={handleChange} required className={inp} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Prima Anual (MXN)</label>
+                  <input name="prima_anual" type="text" value={form.prima_anual} onChange={handleChange} className={inp} placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Suma Asegurada (MXN)</label>
+                  <input name="suma_asegurada" type="text" value={form.suma_asegurada} onChange={handleChange} className={inp} placeholder="0.00" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Tipo de Cobertura</label>
+                  <input name="tipo_cobertura" type="text" value={form.tipo_cobertura} onChange={handleChange} className={inp} placeholder="Amplia, RC, etc." />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Estado</label>
+                  <select name="estado" value={form.estado} onChange={handleChange} className={inp}>
+                    <option value="activo">Activo</option>
+                    <option value="vencido">Vencido</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Fecha Inicio</label>
+                  <input name="fecha_inicio" type="date" value={form.fecha_inicio} onChange={handleChange} className={inp} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Fecha Vencimiento</label>
+                  <input name="fecha_vencimiento" type="date" value={form.fecha_vencimiento} onChange={handleChange} className={inp} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Notas</label>
+                  <textarea name="notas" value={form.notas} onChange={handleChange} rows={2} className={inp} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t">
+                <button type="button" onClick={() => setModalPlaca(null)} className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium">
+                  Cancelar
+                </button>
+                <button type="submit" className="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg text-sm font-medium">
+                  {editInsurance ? 'Actualizar' : 'Guardar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
