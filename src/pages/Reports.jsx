@@ -518,6 +518,7 @@ const VEHICLE_COLORS = ['#16a34a','#dc2626','#2563eb','#d97706','#7c3aed','#0891
 
 // ── SECCIÓN 3: Gráficas Mensuales ────────────────────────────────
 function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances }) {
+  const { isLoading } = useFleetStore();
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
   const years = Array.from({ length: 4 }, (_, i) => currentYear - i);
@@ -591,6 +592,15 @@ function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances }) {
       placas.forEach((p) => { row[p] = Math.round(porPlacaMes[p][i]); });
       return row;
     }), [placas, porPlacaMes]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-8 text-gray-400 text-sm">
+        <span className="animate-spin inline-block w-4 h-4 border-2 border-gray-300 border-t-red-600 rounded-full" />
+        Cargando datos...
+      </div>
+    );
+  }
 
   if (placas.length === 0) {
     return (
