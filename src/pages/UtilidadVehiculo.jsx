@@ -28,16 +28,28 @@ const emptyForm = {
   notas: '',
 };
 
+const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
 export default function UtilidadVehiculo() {
   const { viajesAdmin, trucks, insurances, addInsurance, updateInsurance } = useFleetStore();
   const [selectedUnidad, setSelectedUnidad] = useState('');
-  const [modalPlaca, setModalPlaca] = useState(null); // placa del vehículo en edición
-  const [editInsurance, setEditInsurance] = useState(null); // objeto insurance si es edición
+  const [modalPlaca, setModalPlaca] = useState(null);
+  const [editInsurance, setEditInsurance] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [selectedMes, setSelectedMes] = useState(new Date().getMonth()); // 0-11, mes actual por defecto
+
+  const año = new Date().getFullYear();
+
+  // Filtrar viajes por mes seleccionado
+  const viajesFiltrados = viajesAdmin.filter((v) => {
+    if (!v.fecha) return false;
+    const d = new Date(v.fecha);
+    return d.getFullYear() === año && d.getMonth() === selectedMes;
+  });
 
   // Agrupar por unidad directamente desde viajesAdmin
   const unidadesMap = {};
-  viajesAdmin.forEach((v) => {
+  viajesFiltrados.forEach((v) => {
     const key = (v.unidad || '').trim().toUpperCase();
     if (!key) return;
     if (!unidadesMap[key]) {
@@ -138,7 +150,7 @@ export default function UtilidadVehiculo() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Utilidad por Vehículo</h1>
-        <p className="text-gray-500 text-sm">Ingresos, gastos y utilidad neta agrupados por unidad</p>
+        <p className="text-gray-500 text-sm">Ingresos, gastos y utilidad neta — {MESES[selectedMes]} {año}</p>
       </div>
 
       {/* Tabla resumen */}
@@ -336,6 +348,25 @@ export default function UtilidadVehiculo() {
             </div>
           </>
         )}
+      </div>
+
+      {/* Barra de meses */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3">
+        <div className="flex flex-wrap gap-1">
+          {MESES.map((mes, i) => (
+            <button
+              key={mes}
+              onClick={() => { setSelectedMes(i); setSelectedUnidad(''); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                selectedMes === i
+                  ? 'bg-red-700 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {mes}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Modal agregar / editar póliza */}
