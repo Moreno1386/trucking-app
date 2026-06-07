@@ -514,7 +514,13 @@ function SeccionViajes({ trips, trucks, drivers, maintenance, viajesAdmin }) {
 }
 
 // Colores para las líneas por vehículo
-const VEHICLE_COLORS = ['#16a34a','#dc2626','#2563eb','#d97706','#7c3aed','#0891b2','#db2777','#65a30d','#ea580c','#6366f1'];
+const VEHICLE_COLORS = [
+  '#16a34a','#dc2626','#2563eb','#d97706','#7c3aed',
+  '#0891b2','#db2777','#65a30d','#ea580c','#6366f1',
+  '#0d9488','#b45309','#9333ea','#0284c7','#15803d',
+  '#c2410c','#1d4ed8','#a21caf','#047857','#b91c1c',
+  '#7e22ce','#0369a1','#166534','#92400e','#831843',
+];
 
 // ── SECCIÓN 3: Gráficas Mensuales ────────────────────────────────
 function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances }) {
@@ -638,7 +644,8 @@ function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances }) {
                   return row;
                 })}
                 margin={{ top: 10, right: 20, left: 20, bottom: 10 }}
-                barCategoryGap="20%"
+                barCategoryGap="8%"
+                barGap={1}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="mes" tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
