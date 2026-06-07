@@ -514,11 +514,18 @@ function SeccionViajes({ trips, trucks, drivers, maintenance, viajesAdmin }) {
 }
 
 // ── SECCIÓN 3: Gráficas Mensuales ────────────────────────────────
-function SeccionGraficas({ facturas, gastos, maintenance, trips, viajesAdmin }) {
+function SeccionGraficas({ facturas, gastos, maintenance, trips, viajesAdmin, trucks, insurances }) {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
 
   const years = Array.from({ length: 4 }, (_, i) => currentYear - i);
+
+  // Prima mensual total de todas las pólizas activas (prima_anual / 12 por vehículo)
+  const primasMensuales = useMemo(() => {
+    return insurances
+      .filter((i) => i.estado === 'activo')
+      .reduce((sum, i) => sum + (parseFloat(i.prima_anual) || 0) / 12, 0);
+  }, [insurances]);
 
   const monthlyData = useMemo(() => {
     const byMonth = Array.from({ length: 12 }, (_, i) => ({
@@ -526,6 +533,7 @@ function SeccionGraficas({ facturas, gastos, maintenance, trips, viajesAdmin }) 
       facturacion: 0,
       combustible: 0,
       mantenimiento: 0,
+      seguros: 0,
       otros: 0,
     }));
 
@@ -573,11 +581,16 @@ function SeccionGraficas({ facturas, gastos, maintenance, trips, viajesAdmin }) 
         parseMoney(v.pago_operador);
     });
 
+    // ── Pólizas de seguro: prima mensual fija por cada mes del año seleccionado ──
+    byMonth.forEach((m) => {
+      m.seguros = primasMensuales;
+    });
+
     return byMonth.map((m) => ({
       ...m,
-      balance: m.facturacion - m.combustible - m.mantenimiento - m.otros,
+      balance: m.facturacion - m.combustible - m.mantenimiento - m.seguros - m.otros,
     }));
-  }, [facturas, gastos, maintenance, trips, viajesAdmin, year]);
+  }, [facturas, gastos, maintenance, trips, viajesAdmin, year, primasMensuales]);
 
   const hasData = monthlyData.some((m) => m.facturacion > 0 || m.mantenimiento > 0);
   const display = hasData ? monthlyData : buildDemoMonthly(year);
@@ -627,6 +640,7 @@ function SeccionGraficas({ facturas, gastos, maintenance, trips, viajesAdmin }) 
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="combustible" name="Combustible" stackId="a" fill="#ea580c" />
               <Bar dataKey="mantenimiento" name="Mantenimiento" stackId="a" fill="#dc2626" />
+              <Bar dataKey="seguros" name="Seguros" stackId="a" fill="#7c3aed" />
               <Bar dataKey="otros" name="Otros gastos" stackId="a" fill="#b91c1c" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -969,7 +983,7 @@ const TABS = [
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('units');
-  const { trucks, drivers, trips, maintenance, facturas, gastos, viajesAdmin } = useFleetStore();
+  const { trucks, drivers, trips, maintenance, facturas, gastos, viajesAdmin, insurances } = useFleetStore();
   const chartsRef = useRef(null);
 
   const totalFacturado =
@@ -1062,7 +1076,8 @@ export default function Reports() {
           {activeTab === 'charts' && (
             <div ref={chartsRef}>
               <SeccionGraficas
-                facturas={facturas} gastos={gastos} maintenance={maintenance} trips={trips} viajesAdmin={viajesAdmin}
+                facturas={facturas} gastos={gastos} maintenance={maintenance} trips={trips}
+                viajesAdmin={viajesAdmin} trucks={trucks} insurances={insurances}
               />
             </div>
           )}
