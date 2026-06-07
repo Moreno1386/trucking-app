@@ -31,7 +31,7 @@ const emptyForm = {
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 export default function UtilidadVehiculo() {
-  const { viajesAdmin, trucks, insurances, addInsurance, updateInsurance } = useFleetStore();
+  const { viajesAdmin, trucks, insurances, maintenance, addInsurance, updateInsurance } = useFleetStore();
   const [selectedUnidad, setSelectedUnidad] = useState('');
   const [modalPlaca, setModalPlaca] = useState(null);
   const [editInsurance, setEditInsurance] = useState(null);
@@ -76,13 +76,30 @@ export default function UtilidadVehiculo() {
     return ins ? (parseFloat(ins.prima_anual) || 0) : 0;
   };
 
+  const getGastoMantenimiento = (placa) => {
+    const truck = getTruckByPlaca(placa);
+    if (!truck) return 0;
+    return maintenance
+      .filter((m) => {
+        if (m.camion_id !== truck.id || !m.fecha) return false;
+        const d = new Date(m.fecha);
+        return d.getFullYear() === año && d.getMonth() === selectedMes;
+      })
+      .reduce((sum, m) => sum + (parseFloat(m.costo) || 0), 0);
+  };
+
   const resumen = Object.values(unidadesMap).sort((a, b) =>
     a.unidad.localeCompare(b.unidad)
-  ).map((r) => ({
-    ...r,
-    primaAnual: getPrimaAnual(r.unidad),
-    utilidadNeta: r.utilidad - getPrimaAnual(r.unidad),
-  }));
+  ).map((r) => {
+    const primaAnual = getPrimaAnual(r.unidad);
+    const gastoMant = getGastoMantenimiento(r.unidad);
+    return {
+      ...r,
+      primaAnual,
+      gastoMant,
+      utilidadNeta: r.utilidad - primaAnual - gastoMant,
+    };
+  });
 
   const totales = resumen.reduce(
     (acc, r) => ({
@@ -91,9 +108,10 @@ export default function UtilidadVehiculo() {
       totalGastos: acc.totalGastos + r.totalGastos,
       utilidad: acc.utilidad + r.utilidad,
       primaAnual: acc.primaAnual + r.primaAnual,
+      gastoMant: acc.gastoMant + r.gastoMant,
       utilidadNeta: acc.utilidadNeta + r.utilidadNeta,
     }),
-    { count: 0, costoServicio: 0, totalGastos: 0, utilidad: 0, primaAnual: 0, utilidadNeta: 0 }
+    { count: 0, costoServicio: 0, totalGastos: 0, utilidad: 0, primaAnual: 0, gastoMant: 0, utilidadNeta: 0 }
   );
 
   const detalle = selectedUnidad ? resumen.find((r) => r.unidad === selectedUnidad) : null;
@@ -170,13 +188,14 @@ export default function UtilidadVehiculo() {
                 <th className="px-5 py-3 text-right">Total Gastos</th>
                 <th className="px-5 py-3 text-right">Utilidad</th>
                 <th className="px-5 py-3 text-center">Póliza de Seguro</th>
+                <th className="px-5 py-3 text-right">Mantenimiento</th>
                 <th className="px-5 py-3 text-right">Utilidad Neta</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {resumen.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-5 py-8 text-center text-gray-400">
                     No hay viajes registrados en Administrativo
                   </td>
                 </tr>
@@ -212,6 +231,9 @@ export default function UtilidadVehiculo() {
                         </button>
                       )}
                     </td>
+                    <td className="px-5 py-3 text-right font-semibold text-red-600">
+                      {r.gastoMant > 0 ? formatCurrency(r.gastoMant) : '—'}
+                    </td>
                     <td className={`px-5 py-3 text-right font-bold ${r.utilidadNeta >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                       {formatCurrency(r.utilidadNeta)}
                     </td>
@@ -230,6 +252,7 @@ export default function UtilidadVehiculo() {
                     {formatCurrency(totales.utilidad)}
                   </td>
                   <td className="px-5 py-3 text-center font-bold text-red-600">{formatCurrency(totales.primaAnual)}</td>
+                  <td className="px-5 py-3 text-right font-bold text-red-600">{formatCurrency(totales.gastoMant)}</td>
                   <td className={`px-5 py-3 text-right font-bold text-base ${totales.utilidadNeta >= 0 ? 'text-green-700' : 'text-red-600'}`}>
                     {formatCurrency(totales.utilidadNeta)}
                   </td>
@@ -295,6 +318,12 @@ export default function UtilidadVehiculo() {
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   )}
+                </div>
+              </div>
+              <div className="bg-red-50 rounded-lg px-4 py-2 text-center">
+                <div className="text-xs text-gray-500">Mantenimiento</div>
+                <div className="font-bold text-red-600">
+                  {detalle.gastoMant > 0 ? formatCurrency(detalle.gastoMant) : '—'}
                 </div>
               </div>
               <div className={`rounded-lg px-4 py-2 text-center ${detalle.utilidadNeta >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
