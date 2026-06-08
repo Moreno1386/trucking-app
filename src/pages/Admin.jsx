@@ -41,6 +41,8 @@ function ViajesAdmin() {
   const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [form, setForm] = useState(emptyViaje);
+  const [editingCliente, setEditingCliente] = useState(null);
+  const [clienteInput, setClienteInput] = useState('');
 
   // ── Filtros ──────────────────────────────────────────────────
   const [busqueda, setBusqueda] = useState('');
@@ -272,6 +274,7 @@ function ViajesAdmin() {
               <tr className="bg-orange-700">
                 <th className={thClass}>Fecha</th>
                 <th className={thClass}>Destino</th>
+                <th className={thClass}>Clientes</th>
                 <th className={thClass}>Operador</th>
                 <th className={thClass}>Unidad</th>
                 <th className={`${thClass} text-right`}>Costo Serv.</th>
@@ -291,6 +294,40 @@ function ViajesAdmin() {
                   <tr key={v.id} className="hover:bg-orange-50 transition-colors">
                     <td className={tdClass}>{formatDate(v.fecha)}</td>
                     <td className={`${tdClass} font-medium`}>{v.destino}</td>
+                    <td className={tdClass}>
+                      {editingCliente === v.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            autoFocus
+                            value={clienteInput}
+                            onChange={(e) => setClienteInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                updateViajeAdmin(v.id, { cliente: clienteInput });
+                                setEditingCliente(null);
+                              }
+                              if (e.key === 'Escape') setEditingCliente(null);
+                            }}
+                            className="border border-orange-300 rounded px-2 py-1 text-xs w-28 focus:outline-none focus:ring-1 focus:ring-orange-400"
+                          />
+                          <button
+                            onClick={() => { updateViajeAdmin(v.id, { cliente: clienteInput }); setEditingCliente(null); }}
+                            className="text-green-600 hover:text-green-800 text-xs font-bold"
+                          >✓</button>
+                          <button onClick={() => setEditingCliente(null)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">✕</button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 group">
+                          <span className={v.cliente ? 'text-gray-800' : 'text-gray-300'}>{v.cliente || '—'}</span>
+                          <button
+                            onClick={() => { setEditingCliente(v.id); setClienteInput(v.cliente || ''); }}
+                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-orange-600 transition-opacity"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
                     <td className={tdClass}>{v.operador}</td>
                     <td className={tdClass}><span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{v.unidad}</span></td>
                     <td className={`${tdClass} text-right`}>{formatCurrency(v.costo_servicio)}</td>
