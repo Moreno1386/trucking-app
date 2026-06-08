@@ -150,9 +150,9 @@ function ViajesAdmin() {
   const tdClass = 'px-2 py-2 text-sm text-gray-800 whitespace-nowrap';
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden" style={{height:'calc(100vh - 220px)'}}>
       {/* Header */}
-      <div className="flex items-center justify-between p-5 border-b">
+      <div className="flex-shrink-0 flex items-center justify-between p-5 border-b">
         <div className="flex items-center gap-2">
           <Truck className="w-5 h-5 text-orange-600" />
           <h2 className="text-lg font-bold text-gray-900">Registro de Viajes</h2>
@@ -169,7 +169,7 @@ function ViajesAdmin() {
       </div>
 
       {/* Barra de búsqueda y filtros */}
-      <div className="p-4 border-b bg-gray-50 space-y-3">
+      <div className="flex-shrink-0 p-4 border-b bg-gray-50 space-y-3">
         {/* Búsqueda */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -241,7 +241,7 @@ function ViajesAdmin() {
       </div>
 
       {/* Totales (sobre viajes filtrados) */}
-      <div className="sticky top-0 z-20 grid grid-cols-3 gap-4 p-5 border-b bg-orange-50">
+      <div className="flex-shrink-0 grid grid-cols-3 gap-4 p-5 border-b bg-orange-50">
         <div className="text-center">
           <div className="text-xs text-orange-500 mb-1">Total Costo Servicio</div>
           <div className="text-lg font-bold text-orange-700">{formatCurrency(totalCosto)}</div>
@@ -258,7 +258,7 @@ function ViajesAdmin() {
 
       {/* Tabla */}
       {viajesFiltrados.length === 0 ? (
-        <div className="py-16 text-center space-y-2">
+        <div className="flex-1 py-16 text-center space-y-2">
           <Filter className="w-8 h-8 text-gray-300 mx-auto" />
           <div className="text-gray-400 text-sm">
             {viajesAdmin.length === 0 ? 'No hay viajes registrados' : 'No se encontraron viajes con esos filtros'}
@@ -268,7 +268,7 @@ function ViajesAdmin() {
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="flex-1 overflow-auto">
           <table className="table-fixed" style={{width:'100%', minWidth:'1300px'}}>
             <colgroup>
               <col style={{width:'90px'}} />
@@ -285,7 +285,7 @@ function ViajesAdmin() {
               <col style={{width:'105px'}} />
               <col style={{width:'75px'}} />
             </colgroup>
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="bg-orange-700">
                 <th className={thClass}>Fecha</th>
                 <th className={thClass}>Destino</th>
