@@ -150,7 +150,7 @@ function ViajesAdmin() {
   const tdClass = 'px-2 py-2 text-sm text-gray-800 whitespace-nowrap';
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden" style={{height:'calc(100vh - 220px)'}}>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-full">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between p-5 border-b">
         <div className="flex items-center gap-2">
@@ -459,13 +459,13 @@ export default function Admin() {
   const totalUtilidadViajes = viajesAdmin.reduce((s, v) => s + calcUtilidad(v), 0);
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
+    <div className="h-full flex flex-col gap-4 p-6 overflow-hidden">
+      <div className="flex-shrink-0">
         <h1 className="text-2xl font-bold text-gray-900">Administrativo</h1>
         <p className="text-gray-500 text-sm">Control de viajes y utilidades</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 text-center">
           <div className="text-xs text-orange-500 mb-1">Viajes Registrados</div>
           <div className="text-xl font-bold text-orange-700">{viajesAdmin.length}</div>
@@ -476,7 +476,9 @@ export default function Admin() {
         </div>
       </div>
 
-      <ViajesAdmin />
+      <div className="flex-1 min-h-0">
+        <ViajesAdmin />
+      </div>
     </div>
   );
 }
