@@ -269,22 +269,37 @@ function ViajesAdmin() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed min-w-[1100px]">
+          <table className="table-fixed" style={{width:'100%', minWidth:'1300px'}}>
+            <colgroup>
+              <col style={{width:'90px'}} />
+              <col style={{width:'120px'}} />
+              <col style={{width:'120px'}} />
+              <col style={{width:'130px'}} />
+              <col style={{width:'80px'}} />
+              <col style={{width:'105px'}} />
+              <col style={{width:'95px'}} />
+              <col style={{width:'115px'}} />
+              <col style={{width:'115px'}} />
+              <col style={{width:'100px'}} />
+              <col style={{width:'110px'}} />
+              <col style={{width:'105px'}} />
+              <col style={{width:'75px'}} />
+            </colgroup>
             <thead>
               <tr className="bg-orange-700">
-                <th className={thClass} style={{width:'7%'}}>Fecha</th>
-                <th className={thClass} style={{width:'10%'}}>Destino</th>
-                <th className={thClass} style={{width:'10%'}}>Clientes</th>
-                <th className={thClass} style={{width:'10%'}}>Operador</th>
-                <th className={thClass} style={{width:'6%'}}>Unidad</th>
-                <th className={`${thClass} text-right`} style={{width:'8%'}}>Costo Serv.</th>
-                <th className={`${thClass} text-right`} style={{width:'7%'}}>Diesel</th>
-                <th className={`${thClass} text-right`} style={{width:'9%'}}>Casetas Efectivo</th>
-                <th className={`${thClass} text-right`} style={{width:'9%'}}>Casetas Televia</th>
-                <th className={`${thClass} text-right`} style={{width:'8%'}}>Otros Gastos</th>
-                <th className={`${thClass} text-right`} style={{width:'8%'}}>Pago Operador</th>
-                <th className={`${thClass} text-right`} style={{width:'8%'}}>Utilidad</th>
-                <th className={thClass} style={{width:'5%'}}></th>
+                <th className={thClass}>Fecha</th>
+                <th className={thClass}>Destino</th>
+                <th className={thClass}>Clientes</th>
+                <th className={thClass}>Operador</th>
+                <th className={thClass}>Unidad</th>
+                <th className={`${thClass} text-right`}>Costo Serv.</th>
+                <th className={`${thClass} text-right`}>Diesel</th>
+                <th className={`${thClass} text-right`}>Casetas Efectivo</th>
+                <th className={`${thClass} text-right`}>Casetas Televia</th>
+                <th className={`${thClass} text-right`}>Otros Gastos</th>
+                <th className={`${thClass} text-right`}>Pago Operador</th>
+                <th className={`${thClass} text-right`}>Utilidad</th>
+                <th className={thClass}></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
