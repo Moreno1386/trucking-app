@@ -239,7 +239,7 @@ function ViajesAdmin() {
       </div>
 
       {/* Totales (sobre viajes filtrados) */}
-      <div className="grid grid-cols-3 gap-4 p-5 border-b bg-orange-50">
+      <div className="sticky top-0 z-20 grid grid-cols-3 gap-4 p-5 border-b bg-orange-50">
         <div className="text-center">
           <div className="text-xs text-orange-500 mb-1">Total Costo Servicio</div>
           <div className="text-lg font-bold text-orange-700">{formatCurrency(totalCosto)}</div>
@@ -268,7 +268,7 @@ function ViajesAdmin() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-max">
-            <thead>
+            <thead className="sticky top-[88px] z-10">
               <tr className="bg-orange-700">
                 <th className={thClass}>Fecha</th>
                 <th className={thClass}>Destino</th>
