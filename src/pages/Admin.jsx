@@ -266,9 +266,9 @@ function ViajesAdmin() {
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
           <table className="w-full min-w-max">
-            <thead className="sticky top-[88px] z-10">
+            <thead className="sticky top-0 z-10">
               <tr className="bg-orange-700">
                 <th className={thClass}>Fecha</th>
                 <th className={thClass}>Destino</th>
