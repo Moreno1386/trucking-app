@@ -146,8 +146,8 @@ function ViajesAdmin() {
   };
 
   const utilidadPreview = calcUtilidad(form);
-  const thClass = 'px-3 py-2 text-left text-xs font-semibold text-white whitespace-nowrap';
-  const tdClass = 'px-3 py-2 text-sm text-gray-800 whitespace-nowrap';
+  const thClass = 'px-2 py-2 text-left text-xs font-semibold text-white whitespace-nowrap';
+  const tdClass = 'px-2 py-2 text-sm text-gray-800 whitespace-nowrap';
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
@@ -269,22 +269,22 @@ function ViajesAdmin() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-max">
+          <table className="w-full table-fixed min-w-[1100px]">
             <thead>
               <tr className="bg-orange-700">
-                <th className={thClass}>Fecha</th>
-                <th className={thClass}>Destino</th>
-                <th className={thClass}>Clientes</th>
-                <th className={thClass}>Operador</th>
-                <th className={thClass}>Unidad</th>
-                <th className={`${thClass} text-right`}>Costo Serv.</th>
-                <th className={`${thClass} text-right`}>Diesel</th>
-                <th className={`${thClass} text-right`}>Casetas Efectivo</th>
-                <th className={`${thClass} text-right`}>Casetas Televia</th>
-                <th className={`${thClass} text-right`}>Otros Gastos</th>
-                <th className={`${thClass} text-right`}>Pago Operador</th>
-                <th className={`${thClass} text-right`}>Utilidad</th>
-                <th className={thClass}></th>
+                <th className={thClass} style={{width:'7%'}}>Fecha</th>
+                <th className={thClass} style={{width:'10%'}}>Destino</th>
+                <th className={thClass} style={{width:'10%'}}>Clientes</th>
+                <th className={thClass} style={{width:'10%'}}>Operador</th>
+                <th className={thClass} style={{width:'6%'}}>Unidad</th>
+                <th className={`${thClass} text-right`} style={{width:'8%'}}>Costo Serv.</th>
+                <th className={`${thClass} text-right`} style={{width:'7%'}}>Diesel</th>
+                <th className={`${thClass} text-right`} style={{width:'9%'}}>Casetas Efectivo</th>
+                <th className={`${thClass} text-right`} style={{width:'9%'}}>Casetas Televia</th>
+                <th className={`${thClass} text-right`} style={{width:'8%'}}>Otros Gastos</th>
+                <th className={`${thClass} text-right`} style={{width:'8%'}}>Pago Operador</th>
+                <th className={`${thClass} text-right`} style={{width:'8%'}}>Utilidad</th>
+                <th className={thClass} style={{width:'5%'}}></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -317,14 +317,26 @@ function ViajesAdmin() {
                           <button onClick={() => setEditingCliente(null)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">✕</button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 group">
-                          <span className={v.cliente ? 'text-gray-800' : 'text-gray-300'}>{v.cliente || '—'}</span>
-                          <button
-                            onClick={() => { setEditingCliente(v.id); setClienteInput(v.cliente || ''); }}
-                            className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-orange-600 transition-opacity"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`truncate max-w-[80px] ${v.cliente ? 'text-gray-800' : 'text-gray-300'}`}>{v.cliente || '—'}</span>
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                            <button
+                              onClick={() => { setEditingCliente(v.id); setClienteInput(v.cliente || ''); }}
+                              className="text-blue-400 hover:text-blue-600"
+                              title="Editar cliente"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            {v.cliente && (
+                              <button
+                                onClick={() => updateViajeAdmin(v.id, { cliente: '' })}
+                                className="text-red-400 hover:text-red-600"
+                                title="Eliminar cliente"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       )}
                     </td>
