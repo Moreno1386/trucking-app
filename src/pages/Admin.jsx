@@ -459,20 +459,21 @@ export default function Admin() {
   const totalUtilidadViajes = viajesAdmin.reduce((s, v) => s + calcUtilidad(v), 0);
 
   return (
-    <div className="h-full flex flex-col gap-4 p-6 overflow-hidden">
-      <div className="flex-shrink-0">
-        <h1 className="text-2xl font-bold text-gray-900">Administrativo</h1>
-        <p className="text-gray-500 text-sm">Control de viajes y utilidades</p>
-      </div>
-
-      <div className="flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 text-center">
-          <div className="text-xs text-orange-500 mb-1">Viajes Registrados</div>
-          <div className="text-xl font-bold text-orange-700">{viajesAdmin.length}</div>
+    <div className="h-full flex flex-col gap-2 px-6 pt-4 pb-4 overflow-hidden">
+      <div className="flex-shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-gray-900">Administrativo</h1>
+          <p className="text-gray-400 text-xs">Control de viajes y utilidades</p>
         </div>
-        <div className="bg-green-50 border border-green-100 rounded-xl p-4 text-center">
-          <div className="text-xs text-green-500 mb-1">Utilidad Total Viajes</div>
-          <div className="text-xl font-bold text-green-700">{formatCurrency(totalUtilidadViajes)}</div>
+        <div className="flex gap-3">
+          <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-1.5 text-center">
+            <div className="text-xs text-orange-500">Viajes Registrados</div>
+            <div className="text-base font-bold text-orange-700">{viajesAdmin.length}</div>
+          </div>
+          <div className="bg-green-50 border border-green-100 rounded-lg px-4 py-1.5 text-center">
+            <div className="text-xs text-green-500">Utilidad Total Viajes</div>
+            <div className="text-base font-bold text-green-700">{formatCurrency(totalUtilidadViajes)}</div>
+          </div>
         </div>
       </div>
 
