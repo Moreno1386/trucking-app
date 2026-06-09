@@ -152,107 +152,78 @@ function ViajesAdmin() {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-full">
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between p-5 border-b">
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b">
         <div className="flex items-center gap-2">
-          <Truck className="w-5 h-5 text-orange-600" />
-          <h2 className="text-lg font-bold text-gray-900">Registro de Viajes</h2>
+          <Truck className="w-4 h-4 text-orange-600" />
+          <h2 className="text-sm font-bold text-gray-900">Registro de Viajes</h2>
           <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{viajesAdmin.length}</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={exportarExcel} className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-            <Download className="w-4 h-4" /> Exportar Excel
+          <button onClick={exportarExcel} className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium transition-colors">
+            <Download className="w-3.5 h-3.5" /> Exportar Excel
           </button>
-          <button onClick={openAdd} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
-            <Plus className="w-4 h-4" /> Nuevo Viaje
+          <button onClick={openAdd} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium transition-colors">
+            <Plus className="w-3.5 h-3.5" /> Nuevo Viaje
           </button>
         </div>
       </div>
 
       {/* Barra de búsqueda y filtros */}
-      <div className="flex-shrink-0 p-4 border-b bg-gray-50 space-y-3">
-        {/* Búsqueda */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar por destino, operador o unidad..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white"
-          />
-          {busqueda && (
-            <button onClick={() => setBusqueda('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Filtros en fila */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <select
-            value={filtroOperador}
-            onChange={(e) => setFiltroOperador(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700"
-          >
+      <div className="flex-shrink-0 px-3 py-2 border-b bg-gray-50 space-y-2">
+        {/* Búsqueda + filtros en una sola fila */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por destino, operador o unidad..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="w-full pl-8 pr-4 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white"
+            />
+            {busqueda && (
+              <button onClick={() => setBusqueda('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <select value={filtroOperador} onChange={(e) => setFiltroOperador(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700">
             <option value="">Todos los operadores</option>
             {operadores.map((op) => <option key={op} value={op}>{op}</option>)}
           </select>
-
-          <select
-            value={filtroUnidad}
-            onChange={(e) => setFiltroUnidad(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700"
-          >
+          <select value={filtroUnidad} onChange={(e) => setFiltroUnidad(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700">
             <option value="">Todas las unidades</option>
             {unidades.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
-
-          <input
-            type="date"
-            value={filtroDesde}
-            onChange={(e) => setFiltroDesde(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700"
-            title="Desde"
-          />
-
-          <input
-            type="date"
-            value={filtroHasta}
-            onChange={(e) => setFiltroHasta(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700"
-            title="Hasta"
-          />
-        </div>
-
-        {/* Contador y limpiar */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">
-            {hayFiltros
-              ? <span>Mostrando <span className="font-semibold text-orange-600">{viajesFiltrados.length}</span> de <span className="font-semibold">{viajesAdmin.length}</span> viajes</span>
-              : <span>Total: <span className="font-semibold">{viajesAdmin.length}</span> viajes</span>
-            }
-          </span>
+          <input type="date" value={filtroDesde} onChange={(e) => setFiltroDesde(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700" title="Desde" />
+          <input type="date" value={filtroHasta} onChange={(e) => setFiltroHasta(e.target.value)} className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-700" title="Hasta" />
           {hayFiltros && (
-            <button onClick={limpiarFiltros} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors">
-              <XCircle className="w-3.5 h-3.5" /> Limpiar filtros
+            <button onClick={limpiarFiltros} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors whitespace-nowrap">
+              <XCircle className="w-3.5 h-3.5" /> Limpiar
             </button>
           )}
+        </div>
+        <div className="text-xs text-gray-400">
+          {hayFiltros
+            ? <span>Mostrando <span className="font-semibold text-orange-600">{viajesFiltrados.length}</span> de <span className="font-semibold">{viajesAdmin.length}</span> viajes</span>
+            : <span>Total: <span className="font-semibold">{viajesAdmin.length}</span> viajes</span>
+          }
         </div>
       </div>
 
       {/* Totales (sobre viajes filtrados) */}
-      <div className="flex-shrink-0 grid grid-cols-3 gap-4 p-5 border-b bg-orange-50">
+      <div className="flex-shrink-0 grid grid-cols-3 gap-4 px-5 py-2 border-b bg-orange-50">
         <div className="text-center">
-          <div className="text-xs text-orange-500 mb-1">Total Costo Servicio</div>
-          <div className="text-lg font-bold text-orange-700">{formatCurrency(totalCosto)}</div>
+          <div className="text-xs text-orange-500">Total Costo Servicio</div>
+          <div className="text-base font-bold text-orange-700">{formatCurrency(totalCosto)}</div>
         </div>
         <div className="text-center">
-          <div className="text-xs text-red-500 mb-1">Total Gastos</div>
-          <div className="text-lg font-bold text-red-700">{formatCurrency(totalGastos)}</div>
+          <div className="text-xs text-red-500">Total Gastos</div>
+          <div className="text-base font-bold text-red-700">{formatCurrency(totalGastos)}</div>
         </div>
         <div className="text-center">
-          <div className="text-xs text-green-500 mb-1">Total Utilidad</div>
-          <div className="text-lg font-bold text-green-700">{formatCurrency(totalUtilidad)}</div>
+          <div className="text-xs text-green-500">Total Utilidad</div>
+          <div className="text-base font-bold text-green-700">{formatCurrency(totalUtilidad)}</div>
         </div>
       </div>
 
