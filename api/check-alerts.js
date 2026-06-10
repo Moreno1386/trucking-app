@@ -20,9 +20,13 @@ async function sendTelegram(token, chatId, text) {
   }
 }
 
-// Solo devuelve alertas ROJAS (ya vencidas / atención inmediata)
-function getRedAlerts(trucks, drivers, insurances, creditCards) {
-  const alerts = [];
+// Días de anticipación para avisos de vencimiento próximo
+const DIAS_AVISO = 5;
+
+// Devuelve alertas ROJAS (vencidas / hoy) y PRÓXIMAS (vencen en <= DIAS_AVISO días)
+function getAlerts(trucks, drivers, insurances, creditCards) {
+  const red = [];
+  const upcoming = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -32,32 +36,40 @@ function getRedAlerts(trucks, drivers, insurances, creditCards) {
     const interval = truck.intervalo_cambio_aceite || 10000;
     const remaining = interval - kmSince;
     if (remaining <= 0) {
-      alerts.push(`🔴 *Cambio de aceite VENCIDO*\n   Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo}\n   Vencido por ${Math.abs(remaining).toLocaleString('es-MX')} km`);
+      red.push(`🔴 *Cambio de aceite VENCIDO*\n   Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo}\n   Vencido por ${Math.abs(remaining).toLocaleString('es-MX')} km`);
     }
   });
 
-  // Licencias vencidas
+  // Licencias
   drivers.forEach((driver) => {
     if (!driver.licencia_vencimiento) return;
     const exp = new Date(driver.licencia_vencimiento + 'T12:00:00');
     const days = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+    const fullName = `${driver.nombre} ${driver.apellido_paterno} ${driver.apellido_materno || ''}`.trim();
     if (days < 0) {
-      const fullName = `${driver.nombre} ${driver.apellido_paterno} ${driver.apellido_materno || ''}`.trim();
-      alerts.push(`🔴 *Licencia VENCIDA*\n   ${fullName} (${driver.numero_empleado})\n   Venció el ${exp.toLocaleDateString('es-MX')}`);
+      red.push(`🔴 *Licencia VENCIDA*\n   ${fullName} (${driver.numero_empleado})\n   Venció el ${exp.toLocaleDateString('es-MX')}`);
+    } else if (days === 0) {
+      red.push(`🔴 *Licencia vence HOY*\n   ${fullName} (${driver.numero_empleado})`);
+    } else if (days <= DIAS_AVISO) {
+      upcoming.push(`🟠 *Licencia por vencer*\n   ${fullName} (${driver.numero_empleado})\n   Vence en ${days} día${days !== 1 ? 's' : ''} (${exp.toLocaleDateString('es-MX')})`);
     }
   });
 
-  // Seguros vencidos
+  // Pólizas de seguro
   insurances.forEach((ins) => {
     if (!ins.fecha_vencimiento || ins.estado !== 'activo') return;
     const exp = new Date(ins.fecha_vencimiento + 'T12:00:00');
     const days = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
     if (days < 0) {
-      alerts.push(`🔴 *Póliza de seguro VENCIDA*\n   ${ins.aseguradora} — Póliza ${ins.numero_poliza}\n   Venció el ${exp.toLocaleDateString('es-MX')}`);
+      red.push(`🔴 *Póliza de seguro VENCIDA*\n   ${ins.aseguradora} — Póliza ${ins.numero_poliza}\n   Venció el ${exp.toLocaleDateString('es-MX')}`);
+    } else if (days === 0) {
+      red.push(`🔴 *Póliza de seguro vence HOY*\n   ${ins.aseguradora} — Póliza ${ins.numero_poliza}`);
+    } else if (days <= DIAS_AVISO) {
+      upcoming.push(`🟠 *Póliza por vencer*\n   ${ins.aseguradora} — Póliza ${ins.numero_poliza}\n   Vence en ${days} día${days !== 1 ? 's' : ''} (${exp.toLocaleDateString('es-MX')})`);
     }
   });
 
-  // Tarjetas con pago HOY
+  // Tarjetas de crédito
   creditCards.forEach((card) => {
     if (!card.dia_pago) return;
     const currentDay = today.getDate();
@@ -68,16 +80,31 @@ function getRedAlerts(trucks, drivers, insurances, creditCards) {
       : new Date(currentYear, currentMonth + 1, card.dia_pago);
     const days = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
     const last4 = String(card.numero_tarjeta).slice(-4);
+    const saldo = `Saldo: $${Number(card.saldo).toLocaleString('es-MX')}`;
     if (days === 0) {
-      alerts.push(`🔴 *Pago de tarjeta HOY*\n   ${card.banco} ${card.tipo} ****${last4}\n   Saldo: $${Number(card.saldo).toLocaleString('es-MX')}`);
+      red.push(`🔴 *Pago de tarjeta HOY*\n   ${card.banco} ${card.tipo} ****${last4}\n   ${saldo}`);
+    } else if (days <= DIAS_AVISO) {
+      upcoming.push(`🟠 *Pago de tarjeta próximo*\n   ${card.banco} ${card.tipo} ****${last4}\n   Vence en ${days} día${days !== 1 ? 's' : ''} (${dueDate.toLocaleDateString('es-MX')}) — ${saldo}`);
     }
   });
 
-  return alerts;
+  return { red, upcoming };
 }
 
 export default async function handler(req, res) {
   try {
+    // Guard: solo enviar una vez por día
+    const todayStr = new Date().toISOString().slice(0, 10); // "2026-04-27"
+    const { data: lastSentRow } = await supabase
+      .from('settings')
+      .select('*')
+      .eq('key', 'tg_last_sent')
+      .maybeSingle();
+
+    if (lastSentRow?.value === todayStr) {
+      return res.status(200).json({ message: `Notificación ya enviada hoy (${todayStr}). Saltando.` });
+    }
+
     const { data: settings } = await supabase
       .from('settings')
       .select('*')
@@ -97,30 +124,43 @@ export default async function handler(req, res) {
       supabase.from('credit_cards').select('*'),
     ]);
 
-    const alerts = getRedAlerts(t.data || [], d.data || [], i.data || [], cc.data || []);
+    const { red, upcoming } = getAlerts(t.data || [], d.data || [], i.data || [], cc.data || []);
+    const totalAlerts = red.length + upcoming.length;
 
-    if (alerts.length === 0) {
-      return res.status(200).json({ message: 'Sin alertas urgentes hoy.' });
+    if (totalAlerts === 0) {
+      return res.status(200).json({ message: 'Sin alertas hoy.' });
     }
 
     const today = new Date().toLocaleDateString('es-MX', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
 
-    const message = [
-      `🚨 *CHAIRES TRUCKING — Atención Inmediata*`,
+    const parts = [
+      `🚨 *CHAIRES TRUCKING — Alertas del Día*`,
       `_${today}_`,
-      ``,
-      ...alerts,
-      ``,
-      `⚠️ Estos elementos requieren atención urgente.`,
-    ].join('\n\n');
+    ];
+    if (red.length > 0) {
+      parts.push(``, `⚠️ *ATENCIÓN INMEDIATA*`, ...red);
+    }
+    if (upcoming.length > 0) {
+      parts.push(``, `📅 *PRÓXIMOS ${DIAS_AVISO} DÍAS*`, ...upcoming);
+    }
+    const message = parts.join('\n\n');
 
     const ok = await sendTelegram(token, chatId, message);
 
+    if (ok) {
+      // Guardar fecha de hoy para evitar duplicados
+      if (lastSentRow) {
+        await supabase.from('settings').update({ value: todayStr }).eq('key', 'tg_last_sent');
+      } else {
+        await supabase.from('settings').insert({ key: 'tg_last_sent', value: todayStr });
+      }
+    }
+
     return res.status(200).json({
-      message: ok ? `Notificación enviada con ${alerts.length} alerta(s) urgente(s).` : 'Error al enviar Telegram.',
-      alerts: alerts.length,
+      message: ok ? `Notificación enviada: ${red.length} urgente(s), ${upcoming.length} próxima(s).` : 'Error al enviar Telegram.',
+      alerts: totalAlerts,
     });
 
   } catch (err) {
