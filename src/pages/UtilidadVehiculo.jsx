@@ -43,7 +43,7 @@ export default function UtilidadVehiculo() {
   // Filtrar viajes por mes seleccionado
   const viajesFiltrados = viajesAdmin.filter((v) => {
     if (!v.fecha) return false;
-    const d = new Date(v.fecha);
+    const d = new Date(v.fecha + 'T12:00:00');
     return d.getFullYear() === año && d.getMonth() === selectedMes;
   });
 
@@ -82,7 +82,7 @@ export default function UtilidadVehiculo() {
     return maintenance
       .filter((m) => {
         if (m.camion_id !== truck.id || !m.fecha) return false;
-        const d = new Date(m.fecha);
+        const d = new Date(m.fecha + 'T12:00:00');
         return d.getFullYear() === año && d.getMonth() === selectedMes;
       })
       .reduce((sum, m) => sum + (parseFloat(m.costo) || 0), 0);
