@@ -130,6 +130,20 @@ create table turns (
   estado text default 'esperando'
 );
 
+-- MENSUALIDADES DE VEHÍCULOS
+create table mensualidades_vehiculos (
+  id text primary key,
+  vehiculo text not null,
+  camion_id text,
+  pago_mensual numeric default 0,
+  dia_pago integer,
+  total_mensualidades integer,
+  mensualidades_pagadas integer default 0,
+  estado text default 'activo',
+  notas text,
+  created_at text
+);
+
 -- Deshabilitar Row Level Security (app privada sin auth de usuarios)
 alter table trucks disable row level security;
 alter table drivers disable row level security;
@@ -138,3 +152,4 @@ alter table maintenance disable row level security;
 alter table insurances disable row level security;
 alter table credit_cards disable row level security;
 alter table turns disable row level security;
+alter table mensualidades_vehiculos disable row level security;

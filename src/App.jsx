@@ -17,6 +17,7 @@ import Admin from './pages/Admin';
 import Reports from './pages/Reports';
 import Contabilidad from './pages/Contabilidad';
 import UtilidadVehiculo from './pages/UtilidadVehiculo';
+import Mensualidades from './pages/Mensualidades';
 
 function Protected({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="insurance" element={<Insurance />} />
             <Route path="credit-cards" element={<CreditCards />} />
             <Route path="admin" element={<Admin />} />
+            <Route path="mensualidades" element={<Mensualidades />} />
             <Route path="reports" element={<Reports />} />
             <Route path="contabilidad" element={<Contabilidad />} />
             <Route path="utilidad-vehiculo" element={<UtilidadVehiculo />} />

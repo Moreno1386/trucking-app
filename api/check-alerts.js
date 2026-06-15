@@ -24,7 +24,7 @@ async function sendTelegram(token, chatId, text) {
 const DIAS_AVISO = 5;
 
 // Devuelve alertas ROJAS (vencidas / hoy) y PRÓXIMAS (vencen en <= DIAS_AVISO días)
-function getAlerts(trucks, drivers, insurances, creditCards) {
+function getAlerts(trucks, drivers, insurances, creditCards, mensualidades) {
   const red = [];
   const upcoming = [];
   const today = new Date();
@@ -88,6 +88,24 @@ function getAlerts(trucks, drivers, insurances, creditCards) {
     }
   });
 
+  // Mensualidades de vehículos
+  (mensualidades || []).forEach((m) => {
+    if (!m.dia_pago || m.estado === 'liquidado') return;
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const dueDate = m.dia_pago >= currentDay
+      ? new Date(currentYear, currentMonth, m.dia_pago)
+      : new Date(currentYear, currentMonth + 1, m.dia_pago);
+    const days = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+    const monto = `Mensualidad: $${Number(m.pago_mensual).toLocaleString('es-MX')}`;
+    if (days === 0) {
+      red.push(`🔴 *Mensualidad de vehículo HOY*\n   ${m.vehiculo}\n   ${monto}`);
+    } else if (days <= DIAS_AVISO) {
+      upcoming.push(`🟠 *Mensualidad de vehículo próxima*\n   ${m.vehiculo}\n   Vence en ${days} día${days !== 1 ? 's' : ''} (${dueDate.toLocaleDateString('es-MX')}) — ${monto}`);
+    }
+  });
+
   return { red, upcoming };
 }
 
@@ -117,14 +135,15 @@ export default async function handler(req, res) {
 
     const { token, chatId } = settings.value;
 
-    const [t, d, i, cc] = await Promise.all([
+    const [t, d, i, cc, me] = await Promise.all([
       supabase.from('trucks').select('*'),
       supabase.from('drivers').select('*'),
       supabase.from('insurances').select('*'),
       supabase.from('credit_cards').select('*'),
+      supabase.from('mensualidades_vehiculos').select('*'),
     ]);
 
-    const { red, upcoming } = getAlerts(t.data || [], d.data || [], i.data || [], cc.data || []);
+    const { red, upcoming } = getAlerts(t.data || [], d.data || [], i.data || [], cc.data || [], me.data || []);
     const totalAlerts = red.length + upcoming.length;
 
     if (totalAlerts === 0) {

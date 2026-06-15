@@ -21,6 +21,7 @@ const useFleetStore = create((set, get) => ({
   facturas: [],
   gastos: [],
   viajesAdmin: [],
+  mensualidades: [],
   isLoading: false,
 
   // ── Cargar todos los datos desde Supabase ────────────────────
@@ -35,7 +36,7 @@ const useFleetStore = create((set, get) => ({
       return;
     }
 
-    const [t, d, tr, m, i, cc, tu, fa, ga, va] = await Promise.all([
+    const [t, d, tr, m, i, cc, tu, fa, ga, va, me] = await Promise.all([
       supabase.from('trucks').select('*').order('created_at'),
       supabase.from('drivers').select('*').order('created_at'),
       supabase.from('trips').select('*').order('created_at'),
@@ -46,6 +47,7 @@ const useFleetStore = create((set, get) => ({
       supabase.from('facturas').select('*').order('created_at'),
       supabase.from('gastos').select('*').order('created_at'),
       supabase.from('viajes_admin').select('*').order('fecha'),
+      supabase.from('mensualidades_vehiculos').select('*').order('created_at'),
     ]);
 
     const trucks = t.data || [];
@@ -78,6 +80,7 @@ const useFleetStore = create((set, get) => ({
         facturas: fa.data || [],
         gastos: ga.data || [],
         viajesAdmin: va.data || [],
+        mensualidades: me.data || [],
         isLoading: false,
       });
     } else {
@@ -92,6 +95,7 @@ const useFleetStore = create((set, get) => ({
         facturas: fa.data || [],
         gastos: ga.data || [],
         viajesAdmin: va.data || [],
+        mensualidades: me.data || [],
         isLoading: false,
       });
     }
@@ -127,6 +131,8 @@ const useFleetStore = create((set, get) => ({
         () => refresh('gastos', 'gastos'))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'viajes_admin' },
         () => refresh('viajes_admin', 'viajesAdmin', 'fecha'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mensualidades_vehiculos' },
+        () => refresh('mensualidades_vehiculos', 'mensualidades'))
       .subscribe();
 
     return () => supabase.removeChannel(channel);
@@ -349,6 +355,26 @@ const useFleetStore = create((set, get) => ({
     set((s) => ({ viajesAdmin: s.viajesAdmin.filter((v) => v.id !== id) }));
   },
 
+  // ── Mensualidades de Vehículos ───────────────────────────────
+  addMensualidad: async (data) => {
+    const m = { ...data, id: newId(), created_at: now() };
+    const { error } = await supabase.from('mensualidades_vehiculos').insert(m);
+    if (error) { alert('Error al guardar mensualidad: ' + error.message); return false; }
+    set((s) => ({ mensualidades: [...s.mensualidades, m] }));
+    return true;
+  },
+  updateMensualidad: async (id, data) => {
+    const { id: _id, created_at, ...updateData } = data;
+    const { error } = await supabase.from('mensualidades_vehiculos').update(updateData).eq('id', id);
+    if (error) { alert('Error al actualizar mensualidad: ' + error.message); return; }
+    set((s) => ({ mensualidades: s.mensualidades.map((m) => (m.id === id ? { ...m, ...updateData } : m)) }));
+  },
+  deleteMensualidad: async (id) => {
+    const { error } = await supabase.from('mensualidades_vehiculos').delete().eq('id', id);
+    if (error) { alert('Error al eliminar mensualidad: ' + error.message); return; }
+    set((s) => ({ mensualidades: s.mensualidades.filter((m) => m.id !== id) }));
+  },
+
   // ── Computed ─────────────────────────────────────────────────
   getStats: () => {
     const { trucks, drivers } = get();
@@ -362,7 +388,7 @@ const useFleetStore = create((set, get) => ({
   },
 
   getAlerts: () => {
-    const { trucks, drivers, insurances, creditCards } = get();
+    const { trucks, drivers, insurances, creditCards, mensualidades } = get();
     const alerts = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -475,6 +501,38 @@ const useFleetStore = create((set, get) => ({
           titulo: 'Pago de tarjeta próximo',
           mensaje: `${card.banco} ${card.tipo} ****${last4}`,
           detalle: `Vence en ${days} días — Saldo: $${Number(card.saldo).toLocaleString('es-MX')}`,
+        });
+      }
+    });
+
+    // ── Mensualidades de vehículos ────────────────────────────────
+    mensualidades.forEach((m) => {
+      if (!m.dia_pago || m.estado === 'liquidado') return;
+      const currentDay = today.getDate();
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+      const dueDate = m.dia_pago >= currentDay
+        ? new Date(currentYear, currentMonth, m.dia_pago)
+        : new Date(currentYear, currentMonth + 1, m.dia_pago);
+      const days = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+      const monto = `Mensualidad: $${Number(m.pago_mensual).toLocaleString('es-MX')}`;
+      if (days === 0) {
+        alerts.push({
+          id: `mens-today-${m.id}`,
+          type: 'mensualidad_due_today',
+          severity: 'high',
+          titulo: 'Mensualidad de vehículo HOY',
+          mensaje: m.vehiculo,
+          detalle: monto,
+        });
+      } else if (days <= 5) {
+        alerts.push({
+          id: `mens-soon-${m.id}`,
+          type: 'mensualidad_due_soon',
+          severity: 'medium',
+          titulo: 'Mensualidad de vehículo próxima',
+          mensaje: m.vehiculo,
+          detalle: `Vence en ${days} día${days !== 1 ? 's' : ''} (${dueDate.toLocaleDateString('es-MX')}) — ${monto}`,
         });
       }
     });
