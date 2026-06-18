@@ -523,7 +523,7 @@ const VEHICLE_COLORS = [
 ];
 
 // ── SECCIÓN 3: Gráficas Mensuales ────────────────────────────────
-function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances }) {
+function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances, mensualidades }) {
   const { isLoading } = useFleetStore();
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
@@ -579,17 +579,35 @@ function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances }) {
       data[placa][mes] += utilViaje;
     });
 
-    // Descontar prima mensual y mantenimiento
+    // Descontar prima mensual, mantenimiento y pago de vehículo (mensualidad)
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    // Pago mensual del vehículo por placa (misma lógica que Utilidad por Vehículo)
+    const getPagoByPlaca = (placa) => {
+      const truck = trucks.find((t) => (t.placa || '').trim().toUpperCase() === placa);
+      const men = (mensualidades || []).find((mm) => {
+        if (mm.estado === 'liquidado') return false;
+        if (truck && mm.camion_id && mm.camion_id === truck.id) return true;
+        return (mm.vehiculo || '').trim().toUpperCase().includes(placa);
+      });
+      return men ? (parseFloat(men.pago_mensual) || 0) : 0;
+    };
     Object.keys(data).forEach((placa) => {
       const prima = primaMensualPorPlaca[placa] || 0;
+      const pago = getPagoByPlaca(placa);
       for (let m = 0; m < 12; m++) {
         const mant = mantPorPlacaMes[`${placa}__${m}`] || 0;
-        data[placa][m] -= prima + mant;
+        // El pago del vehículo solo aplica de enero al mes actual en el año en curso;
+        // en años pasados aplica todo el año; en años futuros no aplica.
+        let pagoMes = 0;
+        if (year < currentYear) pagoMes = pago;
+        else if (year === currentYear && m <= currentMonth) pagoMes = pago;
+        data[placa][m] -= prima + mant + pagoMes;
       }
     });
 
     return { placas: Object.keys(data).sort(), porPlacaMes: data };
-  }, [viajesAdmin, year, primaMensualPorPlaca, mantPorPlacaMes]);
+  }, [viajesAdmin, year, primaMensualPorPlaca, mantPorPlacaMes, trucks, mensualidades]);
 
   // Datos para gráfica 1: todos los vehículos por mes
   const allVehiclesData = useMemo(() =>
@@ -1007,7 +1025,7 @@ const TABS = [
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('charts');
-  const { trucks, drivers, trips, maintenance, facturas, gastos, viajesAdmin, insurances } = useFleetStore();
+  const { trucks, drivers, trips, maintenance, facturas, gastos, viajesAdmin, insurances, mensualidades } = useFleetStore();
   const chartsRef = useRef(null);
 
   const totalFacturado =
@@ -1090,7 +1108,7 @@ export default function Reports() {
             <div ref={chartsRef}>
               <SeccionGraficas
                 facturas={facturas} gastos={gastos} maintenance={maintenance} trips={trips}
-                viajesAdmin={viajesAdmin} trucks={trucks} insurances={insurances}
+                viajesAdmin={viajesAdmin} trucks={trucks} insurances={insurances} mensualidades={mensualidades}
               />
             </div>
           )}
