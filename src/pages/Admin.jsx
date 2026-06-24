@@ -292,15 +292,27 @@ function ViajesAdmin() {
                                 updateViajeAdmin(v.id, { cliente: clienteInput });
                                 setEditingCliente(null);
                               }
-                              if (e.key === 'Escape') setEditingCliente(null);
+                              if (e.key === 'Escape') { e.target.dataset.cancel = '1'; setEditingCliente(null); }
+                            }}
+                            onBlur={(e) => {
+                              // Guardar automáticamente al salir del campo (clic fuera, Tab, etc.),
+                              // salvo que se haya cancelado con Escape o el botón ✕.
+                              if (e.target.dataset.cancel === '1') return;
+                              updateViajeAdmin(v.id, { cliente: clienteInput });
+                              setEditingCliente(null);
                             }}
                             className="border border-orange-300 rounded px-2 py-1 text-xs w-28 focus:outline-none focus:ring-1 focus:ring-orange-400"
                           />
                           <button
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => { updateViajeAdmin(v.id, { cliente: clienteInput }); setEditingCliente(null); }}
                             className="text-green-600 hover:text-green-800 text-xs font-bold"
                           >✓</button>
-                          <button onClick={() => setEditingCliente(null)} className="text-gray-400 hover:text-gray-600 text-xs font-bold">✕</button>
+                          <button
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => setEditingCliente(null)}
+                            className="text-gray-400 hover:text-gray-600 text-xs font-bold"
+                          >✕</button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5">
