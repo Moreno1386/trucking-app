@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Truck, Plus, Edit, Trash2, X, Eye, Download, Search, Filter, XCircle } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, X, Eye, Download, Search, Filter, XCircle, Eraser } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import useFleetStore from '../store/useFleetStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
@@ -36,7 +36,7 @@ function calcUtilidad(v) {
 }
 
 function ViajesAdmin() {
-  const { viajesAdmin, addViajeAdmin, updateViajeAdmin, deleteViajeAdmin } = useFleetStore();
+  const { viajesAdmin, addViajeAdmin, updateViajeAdmin, deleteViajeAdmin, clearViajesAdmin } = useFleetStore();
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
@@ -98,6 +98,21 @@ function ViajesAdmin() {
   const openEdit = (v) => { setEditItem(v); setForm({ ...v }); setShowModal(true); };
   const handleDelete = (v) => {
     if (window.confirm(`¿Eliminar viaje a "${v.destino}"?`)) deleteViajeAdmin(v.id);
+  };
+
+  const handleLimpiarHoja = async () => {
+    if (viajesAdmin.length === 0) { alert('La hoja ya está vacía.'); return; }
+    // Paso 1: aviso fuerte.
+    const ok = window.confirm(
+      `⚠️ Esto borrará TODOS los ${viajesAdmin.length} viajes del Administrativo de forma permanente.\n\n` +
+      `Úsalo solo para empezar limpio (ej. nuevo año). Esta acción NO se puede deshacer.\n\n¿Quieres continuar?`
+    );
+    if (!ok) return;
+    // Paso 2: confirmación escribiendo la palabra exacta.
+    const palabra = window.prompt('Para confirmar, escribe la palabra:  LIMPIAR');
+    if (palabra !== 'LIMPIAR') { alert('Cancelado. La hoja NO se modificó.'); return; }
+    const exito = await clearViajesAdmin();
+    if (exito) alert('Hoja limpiada. Ya puedes capturar la información nueva.');
   };
 
   const exportarExcel = () => {
@@ -164,6 +179,9 @@ function ViajesAdmin() {
           </button>
           <button onClick={openAdd} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium transition-colors">
             <Plus className="w-3.5 h-3.5" /> Nuevo Viaje
+          </button>
+          <button onClick={handleLimpiarHoja} title="Borrar todos los viajes para empezar limpio" className="flex items-center gap-1.5 border border-red-300 text-red-600 hover:bg-red-50 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors">
+            <Eraser className="w-3.5 h-3.5" /> Limpiar Hoja
           </button>
         </div>
       </div>

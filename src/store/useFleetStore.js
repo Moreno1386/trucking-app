@@ -354,6 +354,13 @@ const useFleetStore = create((set, get) => ({
     if (error) { alert('Error al eliminar viaje: ' + error.message); return; }
     set((s) => ({ viajesAdmin: s.viajesAdmin.filter((v) => v.id !== id) }));
   },
+  // Borra TODOS los viajes del Administrativo (para empezar limpio, ej. nuevo año).
+  clearViajesAdmin: async () => {
+    const { error } = await supabase.from('viajes_admin').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) { alert('Error al limpiar la hoja: ' + error.message); return false; }
+    set({ viajesAdmin: [] });
+    return true;
+  },
 
   // ── Mensualidades de Vehículos ───────────────────────────────
   addMensualidad: async (data) => {
