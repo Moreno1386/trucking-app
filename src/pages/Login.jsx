@@ -11,16 +11,16 @@ export default function Login() {
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     if (!email) { setError('Ingresa tu correo electrónico'); return; }
     if (!password) { setError('Ingresa tu contraseña'); return; }
-    const ok = login(email, password);
+    const ok = await login(email, password);
     if (ok) {
       navigate('/', { replace: true });
     } else {
-      setError('Contraseña incorrecta. Contacta al administrador.');
+      setError('Correo o contraseña incorrectos. Contacta al administrador.');
     }
   };
 
