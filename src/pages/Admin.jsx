@@ -162,18 +162,80 @@ function ViajesAdmin() {
 
   const utilidadPreview = calcUtilidad(form);
   const thClass = 'px-2 py-2 text-left text-xs font-semibold text-white whitespace-nowrap';
-  const tdClass = 'px-2 py-2 text-sm text-gray-800 whitespace-nowrap';
+  // overflow-hidden + text-ellipsis: si el texto no cabe en su columna se corta con "…"
+  // (el texto completo se ve con el mouse encima o en el modal Ver), nunca se encima.
+  const tdClass = 'px-2 py-2 text-sm text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis';
+
+  // Celda de Cliente (texto + edición inline). Se usa igual en la tabla y en las tarjetas de celular.
+  const renderClienteCell = (v) => (
+    editingCliente === v.id ? (
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          value={clienteInput}
+          onChange={(e) => setClienteInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              updateViajeAdmin(v.id, { cliente: clienteInput });
+              setEditingCliente(null);
+            }
+            if (e.key === 'Escape') { e.target.dataset.cancel = '1'; setEditingCliente(null); }
+          }}
+          onBlur={(e) => {
+            // Guardar automáticamente al salir del campo (clic fuera, Tab, etc.),
+            // salvo que se haya cancelado con Escape o el botón ✕.
+            if (e.target.dataset.cancel === '1') return;
+            updateViajeAdmin(v.id, { cliente: clienteInput });
+            setEditingCliente(null);
+          }}
+          className="border border-orange-300 rounded px-2 py-1 text-xs w-28 focus:outline-none focus:ring-1 focus:ring-orange-400"
+        />
+        <button
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => { updateViajeAdmin(v.id, { cliente: clienteInput }); setEditingCliente(null); }}
+          className="text-green-600 hover:text-green-800 text-xs font-bold"
+        >✓</button>
+        <button
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setEditingCliente(null)}
+          className="text-gray-400 hover:text-gray-600 text-xs font-bold"
+        >✕</button>
+      </div>
+    ) : (
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span title={v.cliente || ''} className={`truncate ${v.cliente ? 'text-gray-800' : 'text-gray-300'}`}>{v.cliente || '—'}</span>
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          <button
+            onClick={() => { setEditingCliente(v.id); setClienteInput(v.cliente || ''); }}
+            className="text-blue-400 hover:text-blue-600"
+            title="Editar cliente"
+          >
+            <Edit className="w-3.5 h-3.5" />
+          </button>
+          {v.cliente && (
+            <button
+              onClick={() => updateViajeAdmin(v.id, { cliente: '' })}
+              className="text-red-400 hover:text-red-600"
+              title="Eliminar cliente"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  );
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-full">
       {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b">
+      <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b">
         <div className="flex items-center gap-2">
           <Truck className="w-4 h-4 text-orange-600" />
           <h2 className="text-sm font-bold text-gray-900">Registro de Viajes</h2>
           <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{viajesAdmin.length}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button onClick={exportarExcel} className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium transition-colors">
             <Download className="w-3.5 h-3.5" /> Exportar Excel
           </button>
@@ -188,8 +250,8 @@ function ViajesAdmin() {
 
       {/* Barra de búsqueda y filtros */}
       <div className="flex-shrink-0 px-3 py-2 border-b bg-gray-50 space-y-2">
-        {/* Búsqueda + filtros en una sola fila */}
-        <div className="flex gap-2">
+        {/* Búsqueda + filtros en una sola fila (en celular se acomodan en varias) */}
+        <div className="flex flex-wrap gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
             <input
@@ -257,11 +319,13 @@ function ViajesAdmin() {
           )}
         </div>
       ) : (
-        <div className="flex-1 overflow-auto">
-          <table className="table-fixed" style={{width:'100%', minWidth:'1300px'}}>
+        <>
+        {/* Tabla — solo en pantallas medianas y grandes (laptop/tablet) */}
+        <div className="hidden md:block flex-1 overflow-auto">
+          <table className="table-fixed" style={{width:'100%', minWidth:'1380px'}}>
             <colgroup>
               <col style={{width:'90px'}} />
-              <col style={{width:'120px'}} />
+              <col style={{width:'200px'}} />
               <col style={{width:'120px'}} />
               <col style={{width:'130px'}} />
               <col style={{width:'80px'}} />
@@ -297,66 +361,9 @@ function ViajesAdmin() {
                 return (
                   <tr key={v.id} className="hover:bg-orange-50 transition-colors">
                     <td className={tdClass}>{formatDate(v.fecha)}</td>
-                    <td className={`${tdClass} font-medium`}>{v.destino}</td>
-                    <td className={tdClass}>
-                      {editingCliente === v.id ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            autoFocus
-                            value={clienteInput}
-                            onChange={(e) => setClienteInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                updateViajeAdmin(v.id, { cliente: clienteInput });
-                                setEditingCliente(null);
-                              }
-                              if (e.key === 'Escape') { e.target.dataset.cancel = '1'; setEditingCliente(null); }
-                            }}
-                            onBlur={(e) => {
-                              // Guardar automáticamente al salir del campo (clic fuera, Tab, etc.),
-                              // salvo que se haya cancelado con Escape o el botón ✕.
-                              if (e.target.dataset.cancel === '1') return;
-                              updateViajeAdmin(v.id, { cliente: clienteInput });
-                              setEditingCliente(null);
-                            }}
-                            className="border border-orange-300 rounded px-2 py-1 text-xs w-28 focus:outline-none focus:ring-1 focus:ring-orange-400"
-                          />
-                          <button
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => { updateViajeAdmin(v.id, { cliente: clienteInput }); setEditingCliente(null); }}
-                            className="text-green-600 hover:text-green-800 text-xs font-bold"
-                          >✓</button>
-                          <button
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => setEditingCliente(null)}
-                            className="text-gray-400 hover:text-gray-600 text-xs font-bold"
-                          >✕</button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <span className={`truncate max-w-[80px] ${v.cliente ? 'text-gray-800' : 'text-gray-300'}`}>{v.cliente || '—'}</span>
-                          <div className="flex items-center gap-0.5 flex-shrink-0">
-                            <button
-                              onClick={() => { setEditingCliente(v.id); setClienteInput(v.cliente || ''); }}
-                              className="text-blue-400 hover:text-blue-600"
-                              title="Editar cliente"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            {v.cliente && (
-                              <button
-                                onClick={() => updateViajeAdmin(v.id, { cliente: '' })}
-                                className="text-red-400 hover:text-red-600"
-                                title="Eliminar cliente"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </td>
-                    <td className={tdClass}>{v.operador}</td>
+                    <td className={`${tdClass} font-medium`} title={v.destino}>{v.destino}</td>
+                    <td className={tdClass}>{renderClienteCell(v)}</td>
+                    <td className={tdClass} title={v.operador}>{v.operador}</td>
                     <td className={tdClass}><span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{v.unidad}</span></td>
                     <td className={`${tdClass} text-right`}>{formatCurrency(v.costo_servicio)}</td>
                     <td className={`${tdClass} text-right text-red-600`}>{formatCurrency(v.diesel)}</td>
@@ -378,6 +385,53 @@ function ViajesAdmin() {
             </tbody>
           </table>
         </div>
+
+        {/* Tarjetas — solo en celular; sin scroll horizontal y nada se encima */}
+        <div className="md:hidden flex-1 overflow-y-auto divide-y divide-gray-100">
+          {viajesFiltrados.map((v) => {
+            const util = calcUtilidad(v);
+            return (
+              <div key={v.id} className="p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 break-words">{v.destino}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {formatDate(v.fecha)}
+                      {v.unidad && <span className="ml-2 bg-gray-100 px-1.5 py-0.5 rounded font-mono text-gray-600">{v.unidad}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button onClick={() => setShowDetail(v)} className="text-gray-400 hover:text-gray-600"><Eye className="w-4 h-4" /></button>
+                    <button onClick={() => openEdit(v)} className="text-blue-500 hover:text-blue-700"><Edit className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(v)} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-gray-400 flex-shrink-0">Cliente:</span>
+                  {renderClienteCell(v)}
+                </div>
+                {v.operador && (
+                  <div className="text-xs text-gray-500">Operador: <span className="text-gray-800">{v.operador}</span></div>
+                )}
+                <div className="grid grid-cols-3 gap-2 text-center bg-gray-50 rounded-lg py-1.5">
+                  <div>
+                    <div className="text-[10px] text-gray-400">Costo Serv.</div>
+                    <div className="text-xs font-semibold text-gray-800">{formatCurrency(v.costo_servicio)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400">Gastos</div>
+                    <div className="text-xs font-semibold text-red-600">{formatCurrency(parseMonto(v.costo_servicio) - util)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-400">Utilidad</div>
+                    <div className="text-xs font-bold text-green-700">{formatCurrency(util)}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        </>
       )}
 
       {/* Modal Ver */}
