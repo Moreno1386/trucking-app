@@ -33,13 +33,16 @@ function getAlerts(trucks, drivers, insurances, creditCards, mensualidades) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Cambio de aceite vencido
+  // Cambio de aceite: vencido, o próximo (faltan <= KM_AVISO_ACEITE km)
+  const KM_AVISO_ACEITE = 2000;
   trucks.forEach((truck) => {
     const kmSince = (truck.kilometraje_actual || 0) - (truck.ultimo_cambio_aceite || 0);
     const interval = truck.intervalo_cambio_aceite || 10000;
     const remaining = interval - kmSince;
     if (remaining <= 0) {
       red.push(`🔴 *Cambio de aceite VENCIDO*\n   Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo}\n   Vencido por ${Math.abs(remaining).toLocaleString('es-MX')} km`);
+    } else if (remaining <= KM_AVISO_ACEITE) {
+      upcoming.push(`🟠 *Cambio de aceite próximo*\n   Unidad ${truck.numero_unidad} — ${truck.marca} ${truck.modelo}\n   Faltan ${remaining.toLocaleString('es-MX')} km`);
     }
   });
 
@@ -165,7 +168,7 @@ export default async function handler(req, res) {
       parts.push(``, `⚠️ *ATENCIÓN INMEDIATA*`, ...red);
     }
     if (upcoming.length > 0) {
-      parts.push(``, `📅 *PRÓXIMOS ${DIAS_AVISO} DÍAS*`, ...upcoming);
+      parts.push(``, `📅 *PRÓXIMOS AVISOS*`, ...upcoming);
     }
     const message = parts.join('\n\n');
 
