@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Truck, Users, Route, Bell, AlertTriangle, CheckCircle, ChevronRight, Plus, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useFleetStore from '../store/useFleetStore';
 import { statusClass, statusLabel, formatNumber, getOilStatus } from '../utils/helpers';
 import { supabase } from '../lib/supabase';
+
+// Carga diferida: el resto del Dashboard aparece al instante y el 3D llega después
+const PatioPage = lazy(() => import('./patio/PatioPage'));
 
 function KpiCard({ icon: Icon, label, value, color }) {
   return (
@@ -92,6 +95,11 @@ export default function Dashboard() {
           Enviar Alertas
         </button>
       </div>
+
+      {/* Patio 3D (solo lectura) */}
+      <Suspense fallback={<div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-sm text-gray-400">Cargando Patio 3D…</div>}>
+        <PatioPage records={trucks} embedded />
+      </Suspense>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
