@@ -18,6 +18,7 @@ import Reports from './pages/Reports';
 import Contabilidad from './pages/Contabilidad';
 import UtilidadVehiculo from './pages/UtilidadVehiculo';
 import Mensualidades from './pages/Mensualidades';
+import HistoricoViajes from './pages/HistoricoViajes';
 
 function Protected({ children }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="reports" element={<Reports />} />
             <Route path="contabilidad" element={<Contabilidad />} />
             <Route path="utilidad-vehiculo" element={<UtilidadVehiculo />} />
+            <Route path="historico-viajes" element={<HistoricoViajes />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

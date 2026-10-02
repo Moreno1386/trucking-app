@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Truck, Users, ClipboardList, Route,
   Wrench, FileText, CreditCard, Phone, Settings, LogOut,
-  Menu, X, Bell, Briefcase, BarChart2, BookOpen, TrendingUp, CalendarClock,
+  Menu, X, Bell, Briefcase, BarChart2, BookOpen, TrendingUp, CalendarClock, History,
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
@@ -19,6 +19,7 @@ const navItems = [
   { to: '/contabilidad', icon: BookOpen, label: 'Contabilidad' },
   { to: '/reports', icon: BarChart2, label: 'Gráficas' },
   { to: '/utilidad-vehiculo', icon: TrendingUp, label: 'Utilidad por Vehículo' },
+  { to: '/historico-viajes', icon: History, label: 'Histórico de Viajes' },
 ];
 
 function SidebarContent({ onNav }) {
