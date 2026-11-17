@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Truck, Plus, Edit, Trash2, X, Eye, Download, Search, Filter, XCircle, Eraser } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, X, Eye, Download, Search, Filter, XCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import useFleetStore from '../store/useFleetStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
@@ -35,8 +35,22 @@ function calcUtilidad(v) {
   );
 }
 
-function ViajesAdmin() {
-  const { viajesAdmin, addViajeAdmin, updateViajeAdmin, deleteViajeAdmin, clearViajesAdmin } = useFleetStore();
+// Año de un viaje según su fecha (YYYY-MM-DD)
+const anioDe = (v) => Number(String(v.fecha || '').slice(0, 4)) || null;
+
+// Hojas por año: años con viajes + año actual + 2027
+function useAniosDisponibles(viajesAdmin) {
+  return useMemo(() => [...new Set([
+    ...viajesAdmin.map(anioDe).filter(Boolean),
+    new Date().getFullYear(),
+    2027,
+  ])].sort((a, b) => a - b), [viajesAdmin]);
+}
+
+function ViajesAdmin({ anio, setAnio, anios }) {
+  const { viajesAdmin: todosLosViajes, addViajeAdmin, updateViajeAdmin, deleteViajeAdmin } = useFleetStore();
+  // Solo los viajes de la hoja (año) seleccionada
+  const viajesAdmin = useMemo(() => todosLosViajes.filter((v) => anioDe(v) === anio), [todosLosViajes, anio]);
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState(null);
   const [editItem, setEditItem] = useState(null);
@@ -100,21 +114,6 @@ function ViajesAdmin() {
     if (window.confirm(`¿Eliminar viaje a "${v.destino}"?`)) deleteViajeAdmin(v.id);
   };
 
-  const handleLimpiarHoja = async () => {
-    if (viajesAdmin.length === 0) { alert('La hoja ya está vacía.'); return; }
-    // Paso 1: aviso fuerte.
-    const ok = window.confirm(
-      `⚠️ Esto borrará TODOS los ${viajesAdmin.length} viajes del Administrativo de forma permanente.\n\n` +
-      `Úsalo solo para empezar limpio (ej. nuevo año). Esta acción NO se puede deshacer.\n\n¿Quieres continuar?`
-    );
-    if (!ok) return;
-    // Paso 2: confirmación escribiendo la palabra exacta.
-    const palabra = window.prompt('Para confirmar, escribe la palabra:  LIMPIAR');
-    if (palabra !== 'LIMPIAR') { alert('Cancelado. La hoja NO se modificó.'); return; }
-    const exito = await clearViajesAdmin();
-    if (exito) alert('Hoja limpiada. Ya puedes capturar la información nueva.');
-  };
-
   const exportarExcel = () => {
     const filas = viajesFiltrados.map((v) => ({
       'Fecha': formatDate(v.fecha),
@@ -136,8 +135,8 @@ function ViajesAdmin() {
       { wch: 13 }, { wch: 14 }, { wch: 12 },
     ];
     const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, 'Viajes');
-    XLSX.writeFile(libro, 'registro_viajes.xlsx');
+    XLSX.utils.book_append_sheet(libro, hoja, `Viajes ${anio}`);
+    XLSX.writeFile(libro, `registro_viajes_${anio}.xlsx`);
   };
 
   const handleChange = (e) => {
@@ -157,6 +156,9 @@ function ViajesAdmin() {
     };
     if (editItem) updateViajeAdmin(editItem.id, data);
     else addViajeAdmin(data);
+    // Si la fecha es de otro año, cambiar a esa hoja para que se vea el viaje
+    const y = anioDe(data);
+    if (y && y !== anio) setAnio(y);
     setShowModal(false); setEditItem(null);
   };
 
@@ -242,9 +244,6 @@ function ViajesAdmin() {
           <button onClick={openAdd} className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white px-2.5 py-1 rounded-lg text-xs font-medium transition-colors">
             <Plus className="w-3.5 h-3.5" /> Nuevo Viaje
           </button>
-          <button onClick={handleLimpiarHoja} title="Borrar todos los viajes para empezar limpio" className="flex items-center gap-1.5 border border-red-300 text-red-600 hover:bg-red-50 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors">
-            <Eraser className="w-3.5 h-3.5" /> Limpiar Hoja
-          </button>
         </div>
       </div>
 
@@ -312,7 +311,7 @@ function ViajesAdmin() {
         <div className="flex-1 py-16 text-center space-y-2">
           <Filter className="w-8 h-8 text-gray-300 mx-auto" />
           <div className="text-gray-400 text-sm">
-            {viajesAdmin.length === 0 ? 'No hay viajes registrados' : 'No se encontraron viajes con esos filtros'}
+            {viajesAdmin.length === 0 ? `No hay viajes registrados en ${anio}` : 'No se encontraron viajes con esos filtros'}
           </div>
           {hayFiltros && (
             <button onClick={limpiarFiltros} className="text-xs text-orange-600 hover:underline">Limpiar filtros</button>
@@ -434,6 +433,23 @@ function ViajesAdmin() {
         </>
       )}
 
+      {/* Hojas por año, como las pestañas de Excel */}
+      <div className="flex-shrink-0 flex items-end gap-0.5 bg-gray-100 border-t border-gray-300 px-2 pt-1 overflow-x-auto">
+        {anios.map((y) => (
+          <button
+            key={y}
+            onClick={() => { setAnio(y); limpiarFiltros(); }}
+            className={`px-4 py-1.5 text-sm whitespace-nowrap rounded-t-md border border-b-0 transition-colors ${
+              anio === y
+                ? 'bg-white text-orange-700 font-semibold border-gray-300 shadow-[0_-2px_0_0_#c2410c_inset]'
+                : 'bg-transparent text-gray-600 border-transparent hover:bg-gray-200'
+            }`}
+          >
+            Viajes {y}
+          </button>
+        ))}
+      </div>
+
       {/* Modal Ver */}
       {showDetail && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -509,7 +525,10 @@ function ViajesAdmin() {
 
 // ── Página principal ──────────────────────────────────────────
 export default function Admin() {
-  const { viajesAdmin } = useFleetStore();
+  const { viajesAdmin: todosLosViajes } = useFleetStore();
+  const anios = useAniosDisponibles(todosLosViajes);
+  const [anio, setAnio] = useState(new Date().getFullYear());
+  const viajesAdmin = todosLosViajes.filter((v) => anioDe(v) === anio);
 
   const totalUtilidadViajes = viajesAdmin.reduce((s, v) => s + calcUtilidad(v), 0);
 
@@ -518,22 +537,22 @@ export default function Admin() {
       <div className="flex-shrink-0 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">Administrativo</h1>
-          <p className="text-gray-400 text-xs">Control de viajes y utilidades</p>
+          <p className="text-gray-400 text-xs">Control de viajes y utilidades — {anio}</p>
         </div>
         <div className="flex gap-3">
           <div className="bg-orange-50 border border-orange-100 rounded-lg px-4 py-1.5 text-center">
-            <div className="text-xs text-orange-500">Viajes Registrados</div>
+            <div className="text-xs text-orange-500">Viajes Registrados {anio}</div>
             <div className="text-base font-bold text-orange-700">{viajesAdmin.length}</div>
           </div>
           <div className="bg-green-50 border border-green-100 rounded-lg px-4 py-1.5 text-center">
-            <div className="text-xs text-green-500">Utilidad Total Viajes</div>
+            <div className="text-xs text-green-500">Utilidad Total {anio}</div>
             <div className="text-base font-bold text-green-700">{formatCurrency(totalUtilidadViajes)}</div>
           </div>
         </div>
       </div>
 
       <div className="flex-1 min-h-0">
-        <ViajesAdmin />
+        <ViajesAdmin anio={anio} setAnio={setAnio} anios={anios} />
       </div>
     </div>
   );
