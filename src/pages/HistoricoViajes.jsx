@@ -7,7 +7,7 @@ import {
 import { supabase } from '../lib/supabase';
 
 // Histórico de viajes (2020 en adelante). Solo consulta; vive en su propia tabla
-// `viajes_historicos` y no se conecta con Administrativo ni con el Dashboard.
+// `viajes_historicos`. Desde 2026 además LEE (solo lectura) los viajes de Administrativo.
 
 const TABLE = 'viajes_historicos';
 
@@ -137,6 +137,41 @@ async function fetchAll() {
   return out;
 }
 
+// Viajes de 2026 en adelante: se leen EN VIVO de Administrativo (viajes_admin), solo lectura.
+// No se copian ni se guardan en viajes_historicos. Si algún año ya fue importado a
+// viajes_historicos, ese año se muestra desde ahí y se ignora la versión en vivo (sin duplicar).
+const LIVE_DESDE = 2026;
+// Pestañas que siempre se muestran aunque todavía no tengan viajes
+const EXTRA_YEARS = [new Date().getFullYear(), 2027];
+const LIVE_FIELDS = ['costo_servicio', 'diesel', 'casetas_efectivo', 'casetas_televia', 'otros_gastos', 'pago_operador'];
+
+async function fetchAdminVivo(aniosImportados) {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from('viajes_admin')
+      .select('id, fecha, destino, operador, unidad, costo_servicio, diesel, casetas_efectivo, casetas_televia, otros_gastos, pago_operador')
+      .gte('fecha', `${LIVE_DESDE}-01-01`)
+      .order('fecha', { ascending: true })
+      .range(from, from + 999);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < 1000) break;
+  }
+  const orden = {};
+  return out
+    .filter((v) => isIso(v.fecha) && !aniosImportados.has(Number(v.fecha.slice(0, 4))))
+    .map((v) => {
+      const anio = Number(v.fecha.slice(0, 4));
+      orden[anio] = (orden[anio] || 0) + 1;
+      const r = { id: `admin-${v.id}`, anio, orden: orden[anio], fecha: v.fecha, destino: v.destino, operador: v.operador, unidad: v.unidad, vivo: true };
+      LIVE_FIELDS.forEach((k) => { r[k] = toNumber(v[k]); });
+      r.utilidad = Math.round(((r.costo_servicio || 0) - (r.diesel || 0) - (r.casetas_efectivo || 0)
+        - (r.casetas_televia || 0) - (r.otros_gastos || 0) - (r.pago_operador || 0)) * 100) / 100;
+      return r;
+    });
+}
+
 const fieldCls = 'border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent';
 
 export default function HistoricoViajes() {
@@ -156,11 +191,15 @@ export default function HistoricoViajes() {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchAll();
+      const hist = await fetchAll();
+      const vivo = await fetchAdminVivo(new Set(hist.map((r) => r.anio)));
+      const data = [...hist, ...vivo];
       setRows(data);
       setYear((y) => {
-        const ys = [...new Set(data.map((r) => r.anio))].sort();
-        return y !== null && ys.includes(y) ? y : ys[ys.length - 1] ?? null;
+        const ys = [...new Set([...data.map((r) => r.anio), ...EXTRA_YEARS])].sort();
+        if (y !== null && ys.includes(y)) return y;
+        const cy = new Date().getFullYear();
+        return ys.includes(cy) ? cy : ys[ys.length - 1] ?? null;
       });
     } catch (e) {
       setError(e.message || 'No se pudo cargar el histórico');
@@ -170,7 +209,8 @@ export default function HistoricoViajes() {
 
   useEffect(() => { load(); }, []);
 
-  const years = useMemo(() => [...new Set(rows.map((r) => r.anio))].sort(), [rows]);
+  const years = useMemo(() => [...new Set([...rows.map((r) => r.anio), ...EXTRA_YEARS])].sort(), [rows]);
+  const esVivo = year !== null && year >= LIVE_DESDE && !rows.some((r) => r.anio === year && !r.vivo);
   const yearRows = useMemo(() => (year === null ? rows : rows.filter((r) => r.anio === year)), [rows, year]);
   const operadores = useMemo(() => [...new Set(yearRows.map((r) => r.operador).filter(Boolean))].sort(), [yearRows]);
   const unidades = useMemo(() => [...new Set(yearRows.map((r) => r.unidad).filter(Boolean))].sort(), [yearRows]);
@@ -261,6 +301,12 @@ export default function HistoricoViajes() {
         <Stat label="Pago a operadores" value={fmtMoney(totals.pago_operador)} />
         <Stat label="Utilidad" value={fmtMoney(totals.utilidad)} accent={totals.utilidad < 0 ? 'text-red-600' : 'text-green-700'} />
       </div>
+
+      {esVivo && (
+        <div className="text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+          Viajes {year}: se muestran en vivo desde <b>Administrativo</b>. Lo que se capture ahí aparece aquí solo.
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-2">

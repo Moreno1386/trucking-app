@@ -527,7 +527,9 @@ function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances, mensual
   const { isLoading } = useFleetStore();
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
-  const years = Array.from({ length: 4 }, (_, i) => currentYear - i);
+  // Últimos 4 años + 2027 (para el cambio de año), del más nuevo al más viejo
+  const years = [...new Set([2027, ...Array.from({ length: 4 }, (_, i) => currentYear - i)])]
+    .sort((a, b) => b - a);
 
   // Prima mensual por camión (placa → prima/12)
   const primaMensualPorPlaca = useMemo(() => {
@@ -626,9 +628,25 @@ function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances, mensual
     );
   }
 
+  // Selector de año (también se muestra cuando el año no tiene viajes, para poder regresar)
+  const yearSelector = (
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-gray-600 font-medium">Año:</span>
+      <div className="flex gap-1.5">
+        {years.map((y) => (
+          <button key={y} onClick={() => setYear(y)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${year === y ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            {y}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   if (placas.length === 0) {
     return (
       <div className="space-y-4" id="section-charts">
+        {yearSelector}
         <p className="text-sm text-gray-400 italic">No hay viajes registrados para {year}.</p>
       </div>
     );
@@ -637,17 +655,7 @@ function SeccionGraficas({ maintenance, viajesAdmin, trucks, insurances, mensual
   return (
     <div className="space-y-8" id="section-charts">
       {/* Selector de año */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-600 font-medium">Año:</span>
-        <div className="flex gap-1.5">
-          {years.map((y) => (
-            <button key={y} onClick={() => setYear(y)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${year === y ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              {y}
-            </button>
-          ))}
-        </div>
-      </div>
+      {yearSelector}
 
       {/* Gráfica 1: Barras verticales — meses en X, vehículos agrupados */}
       <div className="bg-white rounded-xl border border-gray-100 p-5">

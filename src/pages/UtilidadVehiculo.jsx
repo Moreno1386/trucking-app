@@ -38,7 +38,17 @@ export default function UtilidadVehiculo() {
   const [form, setForm] = useState(emptyForm);
   const [selectedMes, setSelectedMes] = useState(new Date().getMonth()); // 0-11, mes actual por defecto
 
-  const año = new Date().getFullYear();
+  const currentYear = new Date().getFullYear();
+  const [año, setAño] = useState(currentYear);
+
+  // Años disponibles: los que tienen viajes + el actual + 2027 (para el cambio de año)
+  const years = [...new Set([
+    ...viajesAdmin
+      .map((v) => (v.fecha ? new Date(v.fecha + 'T12:00:00').getFullYear() : null))
+      .filter((y) => y && !Number.isNaN(y)),
+    currentYear,
+    2027,
+  ])].sort((a, b) => a - b);
 
   // Filtrar viajes por mes seleccionado
   const viajesFiltrados = viajesAdmin.filter((v) => {
@@ -89,10 +99,11 @@ export default function UtilidadVehiculo() {
   };
 
   // Pago mensual del vehículo (de la pestaña Mensualidades de Vehículos).
-  // Solo se cobra de enero al mes actual (no en meses futuros).
+  // Solo se cobra hasta el mes actual (no en meses ni años futuros).
   const getPagoVehiculo = (placa) => {
     const mesActual = new Date().getMonth();
-    if (selectedMes > mesActual) return 0;
+    if (año > currentYear) return 0;
+    if (año === currentYear && selectedMes > mesActual) return 0;
     const truck = getTruckByPlaca(placa);
     const m = mensualidades.find((men) => {
       if (men.estado === 'liquidado') return false;
@@ -408,7 +419,20 @@ export default function UtilidadVehiculo() {
       </div>
 
       {/* Barra de meses */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3 space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {years.map((y) => (
+            <button
+              key={y}
+              onClick={() => { setAño(y); setSelectedUnidad(''); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                año === y ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {y}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap gap-1">
           {MESES.map((mes, i) => (
             <button
